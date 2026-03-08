@@ -1,0 +1,7 @@
+data/
+.venv/
+.venv-1/
+.claude/
+__pycache__/
+*.xlsx
+secret
