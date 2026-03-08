@@ -107,7 +107,10 @@ def process_sheet(ws, sheet_name):
             if raw is None:
                 record[col_name] = None
             else:
-                record[col_name] = normalize_functions.extract_key_mappings(col_name, str(raw))
+                try:
+                  record[col_name] = normalize_functions.extract_key_mappings(col_name, str(raw))
+                except Exception as e:
+                  record[col_name] = None
                 
 
         records.append(record)
