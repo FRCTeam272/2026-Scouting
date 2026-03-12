@@ -12,6 +12,20 @@ from datetime import datetime
 
 import numpy as np
 
+# TBA /district/2026fma/events → short_name, keyed by first-8-chars of event key
+EVENT_NAMES: dict[str, str] = {
+    "2026mrcm": "Mid-Atlantic Championship",
+    "2026njfl": "Mount Olive",
+    "2026njro": "Robbinsville",
+    "2026njsk": "Montgomery",
+    "2026njta": "Seneca",
+    "2026njwa": "Warren Hills",
+    "2026pabe": "Bensalem",
+    "2026paha": "Hatboro-Horsham",
+    "2026paph": "Philadelphia",
+    "2026pawa": "Centennial",
+}
+
 
 def compute_opr(team_keys: list, alliance_teams: list, scores: list) -> dict:
     """Least-squares OPR.  Returns {team_key: opr_value | None}."""
@@ -1118,10 +1132,11 @@ def main():
 
     for ep in event_prefixes:
         fname = f"{ep}.html"
-        title = f"TBA 2026 — {ep}"
+        display = EVENT_NAMES.get(ep, ep)
+        title = f"TBA 2026 — {display}"
         write_view(ep, fname, title, timestamp)
         d = load_data(DB_PATH, ep)
-        pages.append((fname, ep,
+        pages.append((fname, display,
                       f"{d['overview']['total_teams']} teams · {d['overview']['total_matches']} matches"))
 
     index_html = build_index(pages, timestamp)
