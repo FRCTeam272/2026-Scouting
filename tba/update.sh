@@ -10,14 +10,58 @@ cd "$SCRIPT_DIR"
 
 PYTHON="${PYTHON:-python3}"
 TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S')"
+DB_PATH="${DB_PATH:-matches.db}"
+COUNT_FILE="${COUNT_FILE:-matches-count}"
 
 log() { echo "[$TIMESTAMP] $*"; }
 
+get_match_count() {
+    if [[ ! -f "$DB_PATH" ]]; then
+        echo 0
+        return
+    fi
+
+    "$PYTHON" - "$DB_PATH" <<'PY'
+import sqlite3
+import sys
+
+db_path = sys.argv[1]
+try:
+    con = sqlite3.connect(db_path)
+    row = con.execute("SELECT COUNT(*) FROM matches").fetchone()
+    print(row[0] if row else 0)
+except Exception:
+    print(0)
+finally:
+    try:
+        con.close()
+    except Exception:
+        pass
+PY
+}
+
 log "=== TBA update started ==="
+
+before_count="$(get_match_count)"
+log "Matches in DB before import: $before_count"
 
 # ── 1. Import match data ──────────────────────────────────────────────────────
 log "Running import_matches.py..."
 $PYTHON import_matches.py
+
+after_count="$(get_match_count)"
+log "Matches in DB after import: $after_count"
+
+if [[ "$before_count" == "$after_count" ]]; then
+    log "Match count unchanged — skipping dashboard generation and git commit."
+    log "=== TBA update finished ==="
+    exit 0
+fi
+
+echo "$after_count" > "$COUNT_FILE"
+log "Match count changed ($before_count -> $after_count)."
+delta_count="$((after_count - before_count))"
+delta_str="$(printf "%+d" "$delta_count")"
 
 # ── 2. Regenerate HTML dashboards ────────────────────────────────────────────
 log "Running create_view.py..."
@@ -25,12 +69,12 @@ $PYTHON create_view.py
 
 # ── 3. Commit and push ───────────────────────────────────────────────────────
 log "Staging changes..."
-git add *.html
+git add *.html "$COUNT_FILE"
 
 if git diff --cached --quiet; then
     log "Nothing changed — skipping commit."
 else
-    git commit -m "Auto-update: match data and dashboards [$TIMESTAMP]"
+    git commit -m "Auto-update: matches $before_count->$after_count ($delta_str), dashboards [$TIMESTAMP]"
     log "Pushing to origin..."
     git push origin main
     log "Push complete."

@@ -91,7 +91,7 @@ def load_data(db_path: str, event_prefix: str | None = None) -> dict:
 
     # matches metadata
     match_meta = {}
-    for row in con.execute(f"SELECT key, event_key, comp_level, match_number, winning_alliance FROM matches {key_filter}", args):
+    for row in con.execute(f"SELECT key, event_key, comp_level, set_number, match_number, winning_alliance FROM matches {key_filter}", args):
         match_meta[row["key"]] = dict(row)
 
     # team names keyed by team_key (no filtering — names are global)
@@ -246,6 +246,73 @@ def load_data(db_path: str, event_prefix: str | None = None) -> dict:
     supercharged_count = sum(1 for b in breakdowns.values() if b.get("supercharged_achieved"))
     traversal_count    = sum(1 for b in breakdowns.values() if b.get("traversal_achieved"))
 
+    # ── Elimination bracket (event-specific views only) ──────────────────────
+    bracket = None
+    if ep:
+        elim_team_map: dict = {}
+        for mk, meta in match_meta.items():
+            if meta["comp_level"] == "qm":
+                continue
+            red, blue = [], []
+            for row in con.execute(
+                "SELECT color, team_key FROM alliance_teams WHERE match_key = ? ORDER BY id",
+                (mk,),
+            ):
+                (red if row["color"] == "red" else blue).append(
+                    row["team_key"].replace("frc", "")
+                )
+            elim_team_map[mk] = {"red": red, "blue": blue}
+
+        def sf_match(set_num: int) -> dict | None:
+            candidates = sorted(
+                [(mk, m) for mk, m in match_meta.items()
+                 if m["comp_level"] == "sf" and m["set_number"] == set_num],
+                key=lambda x: x[1]["match_number"],
+            )
+            if not candidates:
+                return None
+            mk, meta = candidates[-1]
+            teams = elim_team_map.get(mk, {"red": [], "blue": []})
+            return {
+                "label":      f"SF{set_num}",
+                "red":        teams["red"],
+                "blue":       teams["blue"],
+                "red_score":  alliance_scores.get((mk, "red")),
+                "blue_score": alliance_scores.get((mk, "blue")),
+                "winner":     meta["winning_alliance"],
+            }
+
+        # 2023+ FRC double-elimination set-number layout:
+        #   R1 upper: 1,2,3,4 | R2 upper: 7,8 + lower: 5,6
+        #   R3 upper final: 11 + lower: 9,10 | R4 lower/elim final: 12,13
+        round_defs = [
+            ("Round 1",  "Upper Bracket",             [1, 2, 3, 4]),
+            ("Round 2",  "Upper / Lower",             [7, 8, 5, 6]),
+            ("Round 3",  "Upper Final / Lower",       [11, 9, 10]),
+            ("Round 4",  "Lower Final / Elim Final",  [12, 13]),
+        ]
+        rounds_data = []
+        for rname, rsub, sets in round_defs:
+            matches = [sf_match(s) for s in sets if sf_match(s) is not None]
+            if matches:
+                rounds_data.append({"name": rname, "sub": rsub, "matches": matches})
+
+        final_matches = []
+        for mk, meta in sorted(match_meta.items(), key=lambda x: x[1]["match_number"]):
+            if meta["comp_level"] != "f":
+                continue
+            ft = elim_team_map.get(mk, {"red": [], "blue": []})
+            final_matches.append({
+                "label":      f"Final {meta['match_number']}",
+                "red":        ft["red"],
+                "blue":       ft["blue"],
+                "red_score":  alliance_scores.get((mk, "red")),
+                "blue_score": alliance_scores.get((mk, "blue")),
+                "winner":     meta["winning_alliance"],
+            })
+
+        bracket = {"rounds": rounds_data, "finals": final_matches}
+
     overview = {
         "total_matches": len(match_meta),
         "total_teams":   len(team_rows),
@@ -255,6 +322,7 @@ def load_data(db_path: str, event_prefix: str | None = None) -> dict:
         "traversal_rate":    round(traversal_count    / total_bd, 4) if total_bd else 0,
         "top_scores":    top_scores,
         "event_matches": event_matches,
+        "bracket":       bracket,
     }
 
     con.close()
@@ -419,6 +487,25 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       .compare-blocks{grid-template-columns:1fr;}
       .match-fields{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));}
     }
+
+    /* Elimination bracket */
+    .bracket-wrap{overflow-x:auto;margin-bottom:16px;padding-bottom:8px;}
+    .bracket{display:flex;gap:14px;align-items:flex-start;min-width:max-content;}
+    .bracket-round{display:flex;flex-direction:column;gap:8px;width:210px;}
+    .bracket-round-header{margin-bottom:4px;}
+    .bracket-round-name{font-size:.75rem;font-weight:700;color:var(--text);}
+    .bracket-round-sub{font-size:.63rem;color:var(--muted);}
+    .bracket-match{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+    .bracket-match-label{font-size:.62rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:3px 8px;background:var(--surface2);border-bottom:1px solid var(--border);}
+    .bracket-alliance{display:flex;align-items:center;gap:6px;padding:5px 8px;border-bottom:1px solid var(--border);}
+    .bracket-alliance:last-child{border-bottom:none;}
+    .bracket-alliance.winner{background:rgba(76,175,130,.12);}
+    .bracket-alliance.loser{opacity:.5;}
+    .bracket-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+    .bracket-dot.red{background:var(--red);}
+    .bracket-dot.blue{background:var(--accent);}
+    .bracket-teams{flex:1;font-size:.7rem;color:var(--text);}
+    .bracket-score{font-size:.78rem;font-weight:700;color:var(--text);min-width:26px;text-align:right;}
   </style>
 </head>
 <body>
@@ -832,6 +919,26 @@ function loadTeam(key) {
   }
 }
 
+// ── Bracket helper ────────────────────────────────────────────────────────────
+function bracketMatch(m) {
+  const redWin  = m.winner === 'red';
+  const blueWin = m.winner === 'blue';
+  const decided = m.winner != null && m.winner !== '';
+  return `<div class="bracket-match">
+    <div class="bracket-match-label">${m.label}</div>
+    <div class="bracket-alliance ${redWin?'winner':decided?'loser':''}">
+      <span class="bracket-dot red"></span>
+      <span class="bracket-teams">${m.red.join(' · ')}</span>
+      <span class="bracket-score">${m.red_score ?? '—'}</span>
+    </div>
+    <div class="bracket-alliance ${blueWin?'winner':decided?'loser':''}">
+      <span class="bracket-dot blue"></span>
+      <span class="bracket-teams">${m.blue.join(' · ')}</span>
+      <span class="bracket-score">${m.blue_score ?? '—'}</span>
+    </div>
+  </div>`;
+}
+
 // ── Overview ──────────────────────────────────────────────────────────────────
 function showOverview() {
   hideAll();
@@ -871,6 +978,29 @@ function showOverview() {
       <div class="stat-card"><div class="stat-label">Supercharged Rate</div>
         <div class="stat-value">${pct(ov.supercharged_rate)}</div></div>
     </div>
+
+    ${ov.bracket ? `
+    <p class="section-title">Elimination Bracket</p>
+    <div class="bracket-wrap">
+      <div class="bracket">
+        ${ov.bracket.rounds.map(r => `
+          <div class="bracket-round">
+            <div class="bracket-round-header">
+              <div class="bracket-round-name">${r.name}</div>
+              <div class="bracket-round-sub">${r.sub}</div>
+            </div>
+            ${r.matches.map(m => bracketMatch(m)).join('')}
+          </div>`).join('')}
+        ${ov.bracket.finals.length > 0 ? `
+          <div class="bracket-round">
+            <div class="bracket-round-header">
+              <div class="bracket-round-name">Finals</div>
+              <div class="bracket-round-sub">Championship</div>
+            </div>
+            ${ov.bracket.finals.map(m => bracketMatch(m)).join('')}
+          </div>` : ''}
+      </div>
+    </div>` : ''}
 
     <p class="section-title">Tower Usage Leaderboard</p>
     <div class="leaderboard">
