@@ -10,6 +10,25 @@ import json
 import sqlite3
 from datetime import datetime
 
+import numpy as np
+
+
+def compute_opr(team_keys: list, alliance_teams: list, scores: list) -> dict:
+    """Least-squares OPR.  Returns {team_key: opr_value | None}."""
+    idx = {tk: i for i, tk in enumerate(team_keys)}
+    rows = [(a, s) for a, s in zip(alliance_teams, scores) if s is not None]
+    if len(rows) < len(team_keys):
+        return {tk: None for tk in team_keys}
+    A = np.zeros((len(rows), len(team_keys)))
+    b = np.zeros(len(rows))
+    for i, (alliance, score) in enumerate(rows):
+        for tk in alliance:
+            if tk in idx:
+                A[i, idx[tk]] = 1.0
+        b[i] = float(score)
+    x, *_ = np.linalg.lstsq(A, b, rcond=None)
+    return {tk: round(float(x[idx[tk]]), 2) for tk in team_keys}
+
 DB_PATH = "matches.db"
 
 
@@ -161,6 +180,34 @@ def load_data(db_path: str, event_prefix: str | None = None) -> dict:
             "events":       sorted(e for e in events_seen if e),
             "match_history": match_history,
         })
+
+    # ── OPR ───────────────────────────────────────────────────────────────────
+    # Group teams per alliance using team_pos keys
+    alliances_map: dict = {}
+    for (mk, color, tk) in team_pos:
+        alliances_map.setdefault((mk, color), []).append(tk)
+
+    alliance_list, score_list, auto_list, teleop_list, endgame_list = [], [], [], [], []
+    for (mk, color), members in alliances_map.items():
+        alliance_list.append(members)
+        score_list.append(alliance_scores.get((mk, color)))
+        hub = hub_scores.get((mk, color), {})
+        auto_list.append(hub.get("auto_points"))
+        teleop_list.append(hub.get("teleop_points"))
+        endgame_list.append(hub.get("endgame_points"))
+
+    team_keys_ordered = [trow["team_key"] for trow in team_rows]
+    opr_map         = compute_opr(team_keys_ordered, alliance_list, score_list)
+    auto_opr_map    = compute_opr(team_keys_ordered, alliance_list, auto_list)
+    teleop_opr_map  = compute_opr(team_keys_ordered, alliance_list, teleop_list)
+    endgame_opr_map = compute_opr(team_keys_ordered, alliance_list, endgame_list)
+
+    for t in teams:
+        tk = t["key"]
+        t["opr"]         = opr_map.get(tk)
+        t["auto_opr"]    = auto_opr_map.get(tk)
+        t["teleop_opr"]  = teleop_opr_map.get(tk)
+        t["endgame_opr"] = endgame_opr_map.get(tk)
 
     # ── Overview stats ────────────────────────────────────────────────────────
     # top alliance scores
@@ -374,6 +421,10 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   <select id="sort-by" title="Sort teams by">
     <option value="tower">Tower usage</option>
     <option value="num" selected>Team number</option>
+    <option value="opr">OPR</option>
+    <option value="auto_opr">Auto OPR</option>
+    <option value="teleop_opr">Teleop OPR</option>
+    <option value="endgame_opr">Endgame OPR</option>
     <option value="auto">Auto avg</option>
     <option value="teleop">Teleop avg</option>
     <option value="combined">Combined avg</option>
@@ -495,11 +546,15 @@ function rebuildSidebar() {
   const q = document.getElementById('search').value.toLowerCase();
   const sortBy = document.getElementById('sort-by').value;
   const sorters = {
-    tower:    (a,b) => (b.tower_rate - a.tower_rate) || (b.tower_matches - a.tower_matches),
-    num:      (a,b) => parseInt(a.num) - parseInt(b.num),
-    auto:     (a,b) => (b.auto_avg ?? -1) - (a.auto_avg ?? -1),
-    teleop:   (a,b) => (b.teleop_avg ?? -1) - (a.teleop_avg ?? -1),
-    combined: (a,b) => ((b.auto_avg??0)+(b.teleop_avg??0)) - ((a.auto_avg??0)+(a.teleop_avg??0)),
+    tower:       (a,b) => (b.tower_rate - a.tower_rate) || (b.tower_matches - a.tower_matches),
+    num:         (a,b) => parseInt(a.num) - parseInt(b.num),
+    opr:         (a,b) => (b.opr         ?? -Infinity) - (a.opr         ?? -Infinity),
+    auto_opr:    (a,b) => (b.auto_opr    ?? -Infinity) - (a.auto_opr    ?? -Infinity),
+    teleop_opr:  (a,b) => (b.teleop_opr  ?? -Infinity) - (a.teleop_opr  ?? -Infinity),
+    endgame_opr: (a,b) => (b.endgame_opr ?? -Infinity) - (a.endgame_opr ?? -Infinity),
+    auto:        (a,b) => (b.auto_avg    ?? -1) - (a.auto_avg    ?? -1),
+    teleop:      (a,b) => (b.teleop_avg  ?? -1) - (a.teleop_avg  ?? -1),
+    combined:    (a,b) => ((b.auto_avg??0)+(b.teleop_avg??0)) - ((a.auto_avg??0)+(a.teleop_avg??0)),
   };
   const visible = DATA.teams
     .filter(t => !hiddenSet.has(t.key) && (t.num.includes(q) || (t.nickname||'').toLowerCase().includes(q)))
@@ -635,6 +690,9 @@ function loadTeam(key) {
                                         .sort((a,b) => b.contrib_avg - a.contrib_avg);
   const contribRank = contribRanked.findIndex(x => x.key === t.key) + 1;
   const contribTotal = contribRanked.length;
+  const oprRanked = [...DATA.teams].filter(x => x.opr !== null).sort((a,b) => b.opr - a.opr);
+  const oprRank = oprRanked.findIndex(x => x.key === t.key) + 1;
+  const oprTotal = oprRanked.length;
 
   const tv = document.getElementById('team-view');
   tv.innerHTML = `
@@ -666,6 +724,18 @@ function loadTeam(key) {
       <div class="stat-card"><div class="stat-label">Pt Contribution Avg</div>
         <div class="stat-value">${t.contrib_avg !== null ? t.contrib_avg : '—'}</div>
         <div class="stat-sub">alliance score ÷ 3${contribRank ? ` · #${contribRank} of ${contribTotal}` : ''}</div></div>
+      <div class="stat-card"><div class="stat-label">OPR</div>
+        <div class="stat-value">${t.opr !== null ? t.opr : '—'}</div>
+        <div class="stat-sub">overall${oprRank ? ` · #${oprRank} of ${oprTotal}` : ''}</div></div>
+      <div class="stat-card"><div class="stat-label">Auto OPR</div>
+        <div class="stat-value">${t.auto_opr !== null ? t.auto_opr : '—'}</div>
+        <div class="stat-sub">hub auto pts</div></div>
+      <div class="stat-card"><div class="stat-label">Teleop OPR</div>
+        <div class="stat-value">${t.teleop_opr !== null ? t.teleop_opr : '—'}</div>
+        <div class="stat-sub">hub teleop pts</div></div>
+      <div class="stat-card"><div class="stat-label">Endgame OPR</div>
+        <div class="stat-value">${t.endgame_opr !== null ? t.endgame_opr : '—'}</div>
+        <div class="stat-sub">hub endgame pts</div></div>
     </div>
 
     ${hasBreakdowns ? `
@@ -812,6 +882,21 @@ function showOverview() {
         <div class="chart-wrap medium"><canvas id="ov-scores"></canvas></div></div>
     </div>
 
+    <p class="section-title">OPR — All Teams</p>
+    <div class="charts-grid single">
+      <div class="chart-card"><h3>OPR (Offensive Power Rating)</h3>
+        <div class="chart-wrap tall"><canvas id="ov-opr"></canvas></div></div>
+    </div>
+
+    <div class="charts-grid triple">
+      <div class="chart-card"><h3>Auto OPR</h3>
+        <div class="chart-wrap medium"><canvas id="ov-auto-opr"></canvas></div></div>
+      <div class="chart-card"><h3>Teleop OPR</h3>
+        <div class="chart-wrap medium"><canvas id="ov-teleop-opr"></canvas></div></div>
+      <div class="chart-card"><h3>Endgame OPR</h3>
+        <div class="chart-wrap medium"><canvas id="ov-endgame-opr"></canvas></div></div>
+    </div>
+
     <p class="section-title">Point Contribution Average — All Teams</p>
     <div class="charts-grid single">
       <div class="chart-card"><h3>Avg Pt Contribution per Match (alliance score ÷ 3)</h3>
@@ -840,6 +925,24 @@ function showOverview() {
       borderColor:     topScores.map(s => s.color==='red' ? P.red      : P.blue),
       borderWidth:1 }]},
     options: baseOpts()});
+
+  // OPR charts
+  const oprScaleOpts = { scales:{
+    x:{grid:{color:'#2e334d'},ticks:{color:'#7b82a0',maxRotation:90,font:{size:9}}},
+    y:{grid:{color:'#2e334d'},ticks:{color:'#7b82a0'}} }};
+  function makeOprChart(canvasId, field, color) {
+    const sorted = [...allTeams].filter(t => t[field] !== null).sort((a,b) => b[field] - a[field]);
+    makeChart(canvasId, { type:'bar', data:{
+      labels: sorted.map(t => '#'+t.num),
+      datasets:[{ label: field.replace('_',' ').replace('opr','OPR'),
+        data: sorted.map(t => t[field]),
+        backgroundColor: color+'cc', borderColor: color, borderWidth:1 }]},
+      options: baseOpts(oprScaleOpts)});
+  }
+  makeOprChart('ov-opr',         'opr',         P.accent);
+  makeOprChart('ov-auto-opr',    'auto_opr',     P.blue);
+  makeOprChart('ov-teleop-opr',  'teleop_opr',   P.orange);
+  makeOprChart('ov-endgame-opr', 'endgame_opr',  P.purple);
 
   // Point contribution avg all teams
   const contribSorted = [...allTeams].filter(t => t.contrib_avg !== null)
