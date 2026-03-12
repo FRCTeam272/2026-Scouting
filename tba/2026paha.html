@@ -202,7 +202,7 @@
   </button>
   <h1>TBA 2026 — Hatboro-Horsham</h1>
   <span id="team-count"></span>
-  <span id="ts-label" style="color:var(--muted);font-size:.75rem;white-space:nowrap;">Generated 2026-03-12 15:34</span>
+  <span id="ts-label" style="color:var(--muted);font-size:.75rem;white-space:nowrap;">Generated 2026-03-12 16:07</span>
   <input id="search" type="text" placeholder="Search team..."/>
   <select id="sort-by" title="Sort teams by">
     <option value="tower">Tower usage</option>
@@ -478,7 +478,7 @@ function scheduleMatchCard(m) {
   const blueWin = m.winner === 'blue';
   const decided = m.winner != null;
   const allNums = [...m.red, ...m.blue].map(k => k.replace('frc','')).join(' ');
-  return `<div class="match-card" data-teams="${allNums}">
+  return `<div class="match-card" data-teams="${allNums}" data-played="${m.winner ? '1' : '0'}">
     <div class="match-card-header">
       <span class="match-label">${lbl}</span>
       <span class="event-tag">${eventShort(m.event)}</span>
@@ -505,21 +505,37 @@ function scheduleMatchCard(m) {
     </div>
   </div>`;
 }
+let schedHidePlayed = false;
 function filterSchedule(q) {
-  const term = q.trim().replace(/^frc/i, '');
+  const term = (q ?? document.getElementById('sched-filter')?.value ?? '').trim().replace(/^frc/i, '');
   let shown = 0;
   document.querySelectorAll('#sched-matches .match-card').forEach(card => {
-    const visible = !term || card.dataset.teams.split(' ').some(n => n.startsWith(term));
+    const exactMatch = term && DATA.teams.some(t => t.num === term);
+    const teamMatch = !term || (exactMatch
+      ? card.dataset.teams.split(' ').includes(term)
+      : card.dataset.teams.split(' ').some(n => n.startsWith(term)));
+    const playedHidden = schedHidePlayed && card.dataset.played === '1';
+    const visible = teamMatch && !playedHidden;
     card.style.display = visible ? '' : 'none';
     if (visible) shown++;
   });
   document.getElementById('sched-shown').textContent = shown;
+}
+function toggleHidePlayed() {
+  schedHidePlayed = !schedHidePlayed;
+  localStorage.setItem('tba_sched_hide_played', schedHidePlayed ? '1' : '0');
+  const btn = document.getElementById('sched-hide-played');
+  btn.textContent = schedHidePlayed ? 'Show played' : 'Hide played';
+  btn.style.borderColor = schedHidePlayed ? 'var(--accent)' : '';
+  btn.style.color = schedHidePlayed ? 'var(--accent)' : '';
+  filterSchedule();
 }
 function showSchedule() {
   hideAll();
   saveNav({view: 'schedule'});
   closeSidebar();
   document.getElementById('schedule-btn').classList.add('active');
+  schedHidePlayed = localStorage.getItem('tba_sched_hide_played') === '1';
   const sched = DATA.schedule || [];
   const sv = document.getElementById('schedule-view');
   if (sched.length === 0) {
@@ -534,17 +550,30 @@ function showSchedule() {
       <h2>Schedule</h2>
       <p>${sched.length} match${sched.length !== 1 ? 'es' : ''} · ${played} played · ${upcoming} upcoming</p>
     </div>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
       <input id="sched-filter" type="text" placeholder="Filter by team number…"
              style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 11px;color:var(--text);font-size:.85rem;width:220px;outline:none;"
              oninput="filterSchedule(this.value)"
              onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+      ${upcoming > 0 ? `<button id="sched-hide-played" onclick="toggleHidePlayed()"
+        style="font-size:.78rem;font-weight:600;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 11px;cursor:pointer;white-space:nowrap;">Hide played</button>` : ''}
       <span style="font-size:.8rem;color:var(--muted);"><span id="sched-shown">${sched.length}</span> shown</span>
     </div>
     <div class="matches-grid" id="sched-matches">
       ${sched.map(scheduleMatchCard).join('')}
     </div>`;
   sv.style.display = 'block';
+  const _sf = localStorage.getItem('tba_sched_filter') || '';
+  const _filterEl = document.getElementById('sched-filter');
+  if (_filterEl) {
+    if (_sf) _filterEl.value = _sf;
+    _filterEl.addEventListener('input', e => localStorage.setItem('tba_sched_filter', e.target.value));
+  }
+  if (schedHidePlayed) {
+    const btn = document.getElementById('sched-hide-played');
+    if (btn) { btn.textContent = 'Show played'; btn.style.borderColor = 'var(--accent)'; btn.style.color = 'var(--accent)'; }
+  }
+  filterSchedule();
 }
 
 function towerBadge(val) {
@@ -928,13 +957,19 @@ function buildSidebar(teams) {
   }).join('');
 }
 
-document.getElementById('search').addEventListener('input', rebuildSidebar);
+document.getElementById('search').addEventListener('input', () => {
+  localStorage.setItem('tba_search', document.getElementById('search').value);
+  rebuildSidebar();
+});
 document.getElementById('search').addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
   const first = document.querySelector('.team-item[data-key]');
   if (first) { loadTeam(first.dataset.key); document.getElementById('search').blur(); }
 });
-document.getElementById('sort-by').addEventListener('change', rebuildSidebar);
+document.getElementById('sort-by').addEventListener('change', () => {
+  localStorage.setItem('tba_sort', document.getElementById('sort-by').value);
+  rebuildSidebar();
+});
 
 // ── State persistence ─────────────────────────────────────────────────────────
 function saveNav(state) { localStorage.setItem('tba_nav', JSON.stringify(state)); }
@@ -944,33 +979,37 @@ function restoreNav() {
   try { state = JSON.parse(localStorage.getItem('tba_nav')); } catch { return; }
   if (!state) return;
   if (state.view === 'overview') {
-    showOverview();
+    showOverview(); return true;
   } else if (state.view === 'team' && state.key) {
     const t = DATA.teams.find(t => t.key === state.key);
-    if (t) loadTeam(state.key);
+    if (t) { loadTeam(state.key); return true; }
   } else if (state.view === 'compare' && state.keys?.length >= 2) {
     state.keys.forEach(k => { if (DATA.teams.find(t => t.key === k)) compareSet.add(k); });
     updateCompareBar(); updateCheckboxStates();
-    showComparison();
+    showComparison(); return true;
   } else if (state.view === 'schedule') {
-    showSchedule();
+    showSchedule(); return true;
   }
 }
 
 // ── Mobile sidebar ────────────────────────────────────────────────────────────
 function toggleSidebar() {
   document.querySelector('aside').classList.toggle('open');
-  document.querySelector('.sidebar-overlay').classList.toggle('open');
+  document.querySelector('.sidebar-overlay')?.classList.toggle('open');
 }
 function closeSidebar() {
   document.querySelector('aside').classList.remove('open');
-  document.querySelector('.sidebar-overlay').classList.remove('open');
+  document.querySelector('.sidebar-overlay')?.classList.remove('open');
 }
 
 // Boot
 document.getElementById('team-count').textContent = `${DATA.teams.length} teams`;
 const _schedUpcoming = (DATA.schedule || []).filter(m => !m.winner).length;
 if (_schedUpcoming > 0) document.getElementById('schedule-count').textContent = _schedUpcoming;
+const _savedSearch = localStorage.getItem('tba_search');
+const _savedSort   = localStorage.getItem('tba_sort');
+if (_savedSearch) document.getElementById('search').value = _savedSearch;
+if (_savedSort)   document.getElementById('sort-by').value = _savedSort;
 rebuildSidebar();
 restoreNav() || showOverview();
 </script>
