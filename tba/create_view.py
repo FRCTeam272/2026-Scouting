@@ -1,5 +1,5 @@
 """
-Generate a dark-themed HTML dashboard (index.html) from matches.db.
+Generate a dark-themed HTML dashboard (Region Wide.html) from matches.db.
 
 Shows:
   • Overview  — tower-usage leaderboard, top alliance scores, RP/achievement rates
@@ -8,55 +8,60 @@ Shows:
 
 import json
 import sqlite3
+from datetime import datetime
 
-DB_PATH  = "matches.db"
-OUT_PATH = "index.html"
+DB_PATH = "matches.db"
 
 
 # ── Query helpers ─────────────────────────────────────────────────────────────
 
-def load_data(db_path: str) -> dict:
+def load_data(db_path: str, event_prefix: str | None = None) -> dict:
     con = sqlite3.connect(db_path)
     con.row_factory = sqlite3.Row
 
+    ep = event_prefix  # e.g. "2026njwa"
+    mk_filter   = "WHERE substr(match_key,1,8)=?"   if ep else ""
+    key_filter  = "WHERE substr(key,1,8)=?"          if ep else ""
+    args        = (ep,) if ep else ()
+
     # robot position (1-indexed) for each team per match+color
     team_pos = {}
-    for row in con.execute("""
+    for row in con.execute(f"""
         SELECT match_key, color, team_key,
                ROW_NUMBER() OVER (PARTITION BY match_key, color ORDER BY id) AS pos
-        FROM alliance_teams
-    """):
+        FROM alliance_teams {mk_filter}
+    """, args):
         team_pos[(row["match_key"], row["color"], row["team_key"])] = row["pos"]
 
     # all teams and their match counts
-    team_rows = con.execute("""
+    team_rows = con.execute(f"""
         SELECT team_key, COUNT(*) AS played
-        FROM alliance_teams
+        FROM alliance_teams {mk_filter}
         GROUP BY team_key
         ORDER BY CAST(SUBSTR(team_key, 4) AS INTEGER)
-    """).fetchall()
+    """, args).fetchall()
 
     # score_breakdowns keyed by (match_key, color)
     breakdowns = {}
-    for row in con.execute("SELECT * FROM score_breakdowns"):
+    for row in con.execute(f"SELECT * FROM score_breakdowns {mk_filter}", args):
         breakdowns[(row["match_key"], row["color"])] = dict(row)
 
     # hub_scores keyed by (match_key, color)
     hub_scores = {}
-    for row in con.execute("SELECT * FROM hub_scores"):
+    for row in con.execute(f"SELECT * FROM hub_scores {mk_filter}", args):
         hub_scores[(row["match_key"], row["color"])] = dict(row)
 
     # alliance scores
     alliance_scores = {}
-    for row in con.execute("SELECT match_key, color, score FROM match_alliances"):
+    for row in con.execute(f"SELECT match_key, color, score FROM match_alliances {mk_filter}", args):
         alliance_scores[(row["match_key"], row["color"])] = row["score"]
 
     # matches metadata
     match_meta = {}
-    for row in con.execute("SELECT key, event_key, comp_level, match_number, winning_alliance FROM matches"):
+    for row in con.execute(f"SELECT key, event_key, comp_level, match_number, winning_alliance FROM matches {key_filter}", args):
         match_meta[row["key"]] = dict(row)
 
-    # team names keyed by team_key (table may not exist if import hasn't run yet)
+    # team names keyed by team_key (no filtering — names are global)
     team_names = {}
     try:
         for row in con.execute("SELECT team_key, nickname FROM teams"):
@@ -66,7 +71,7 @@ def load_data(db_path: str) -> dict:
 
     # videos keyed by match_key (first youtube video wins)
     match_videos = {}
-    for row in con.execute("SELECT match_key, type, video_key FROM match_videos"):
+    for row in con.execute(f"SELECT match_key, type, video_key FROM match_videos {mk_filter}", args):
         if row["match_key"] not in match_videos and row["type"] == "youtube":
             match_videos[row["match_key"]] = f"https://www.youtube.com/watch?v={row['video_key']}"
 
@@ -136,6 +141,11 @@ def load_data(db_path: str) -> dict:
         scored = [m["score"] for m in match_history if m["score"] is not None]
         contrib_avg = round(sum(scored) / (len(scored) * 3), 2) if scored else None
 
+        auto_vals   = [m["hub_auto_pts"]   for m in match_history if m["hub_auto_pts"]   is not None]
+        teleop_vals = [m["hub_teleop_pts"]  for m in match_history if m["hub_teleop_pts"] is not None]
+        auto_avg    = round(sum(auto_vals)   / len(auto_vals),   2) if auto_vals   else None
+        teleop_avg  = round(sum(teleop_vals) / len(teleop_vals), 2) if teleop_vals else None
+
         teams.append({
             "key":          tk,
             "num":          num,
@@ -146,6 +156,8 @@ def load_data(db_path: str) -> dict:
             "auto_tower_count":   auto_tower_count,
             "endgame_tower_count": endgame_tower_count,
             "contrib_avg":  contrib_avg,
+            "auto_avg":     auto_avg,
+            "teleop_avg":   teleop_avg,
             "events":       sorted(e for e in events_seen if e),
             "match_history": match_history,
         })
@@ -195,7 +207,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>TBA Match Viewer 2026</title>
+  <title>__TITLE__</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
   <style>
     :root {
@@ -212,6 +224,8 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     #team-count{color:var(--muted);font-size:.8rem;white-space:nowrap;}
     #search{margin-left:auto;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:.85rem;width:180px;outline:none;}
     #search:focus{border-color:var(--accent);}
+    #sort-by{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:.8rem;outline:none;cursor:pointer;}
+    #sort-by:focus{border-color:var(--accent);}
 
     .layout{display:flex;flex:1;overflow:hidden;}
     aside{width:var(--sidebar-w);flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
@@ -324,18 +338,46 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     .compare-block{border:1px solid var(--border);border-radius:10px;overflow:hidden;}
     .compare-block-header{font-size:.9rem;font-weight:700;color:var(--accent);padding:9px 14px;background:var(--surface2);border-bottom:1px solid var(--border);}
 
+    #menu-btn{display:none;background:none;border:none;color:var(--text);cursor:pointer;padding:4px;flex-shrink:0;line-height:0;}
+    .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99;}
+    .sidebar-overlay.open{display:block;}
+
     @media(max-width:768px){
+      body{height:100dvh;}
+      header{flex-wrap:wrap;gap:8px;}
+      header h1{font-size:1rem;}
+      #menu-btn{display:block;}
+      #team-count,#ts-label{display:none;}
+      #search{width:100%;margin-left:0;order:10;flex:1 1 100%;}
+      #sort-by{order:11;flex:1 1 100%;}
+      aside{position:fixed;top:0;left:0;height:100%;z-index:100;transform:translateX(-100%);transition:transform .25s ease;width:min(var(--sidebar-w),85vw);}
+      aside.open{transform:translateX(0);}
+      main{padding:12px;}
       .charts-grid,.charts-grid.triple{grid-template-columns:1fr;}
       .stat-row{grid-template-columns:1fr 1fr;}
       .compare-blocks{grid-template-columns:1fr;}
+      .match-fields{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));}
     }
   </style>
 </head>
 <body>
 <header>
-  <h1>TBA Match Viewer 2026</h1>
+  <button id="menu-btn" onclick="toggleSidebar()" title="Menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+  <h1>__TITLE__</h1>
   <span id="team-count"></span>
+  <span id="ts-label" style="color:var(--muted);font-size:.75rem;white-space:nowrap;">Generated __TIMESTAMP__</span>
   <input id="search" type="text" placeholder="Search team..."/>
+  <select id="sort-by" title="Sort teams by">
+    <option value="tower">Tower usage</option>
+    <option value="num" selected>Team number</option>
+    <option value="auto">Auto avg</option>
+    <option value="teleop">Teleop avg</option>
+    <option value="combined">Combined avg</option>
+  </select>
 </header>
 <div class="layout">
   <aside>
@@ -451,9 +493,17 @@ function showAllHidden() {
 }
 function rebuildSidebar() {
   const q = document.getElementById('search').value.toLowerCase();
+  const sortBy = document.getElementById('sort-by').value;
+  const sorters = {
+    tower:    (a,b) => (b.tower_rate - a.tower_rate) || (b.tower_matches - a.tower_matches),
+    num:      (a,b) => parseInt(a.num) - parseInt(b.num),
+    auto:     (a,b) => (b.auto_avg ?? -1) - (a.auto_avg ?? -1),
+    teleop:   (a,b) => (b.teleop_avg ?? -1) - (a.teleop_avg ?? -1),
+    combined: (a,b) => ((b.auto_avg??0)+(b.teleop_avg??0)) - ((a.auto_avg??0)+(a.teleop_avg??0)),
+  };
   const visible = DATA.teams
     .filter(t => !hiddenSet.has(t.key) && (t.num.includes(q) || (t.nickname||'').toLowerCase().includes(q)))
-    .sort((a,b) => b.tower_rate - a.tower_rate || b.tower_matches - a.tower_matches);
+    .sort(sorters[sortBy] || sorters.tower);
   buildSidebar(visible);
   const btn = document.getElementById('show-hidden-btn');
   btn.style.display = hiddenSet.size > 0 ? 'block' : 'none';
@@ -576,6 +626,7 @@ function loadTeam(key) {
   const t = DATA.teams.find(t => t.key === key);
   if (!t) return;
   saveNav({view: 'team', key});
+  closeSidebar();
   document.querySelector(`.team-item[data-key="${key}"]`)?.classList.add('active');
 
   const hasBreakdowns = t.match_history.some(m => m.auto_tower !== null || m.endgame_tower !== null);
@@ -701,6 +752,7 @@ function loadTeam(key) {
 function showOverview() {
   hideAll();
   saveNav({view: 'overview'});
+  closeSidebar();
   document.getElementById('overview-btn').classList.add('active');
   const ov = DATA.overview;
   const towerTeams = [...DATA.teams].filter(t => t.tower_matches > 0)
@@ -835,6 +887,12 @@ function buildSidebar(teams) {
 }
 
 document.getElementById('search').addEventListener('input', rebuildSidebar);
+document.getElementById('search').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const first = document.querySelector('.team-item[data-key]');
+  if (first) { loadTeam(first.dataset.key); document.getElementById('search').blur(); }
+});
+document.getElementById('sort-by').addEventListener('change', rebuildSidebar);
 
 // ── State persistence ─────────────────────────────────────────────────────────
 function saveNav(state) { localStorage.setItem('tba_nav', JSON.stringify(state)); }
@@ -855,30 +913,120 @@ function restoreNav() {
   }
 }
 
+// ── Mobile sidebar ────────────────────────────────────────────────────────────
+function toggleSidebar() {
+  document.querySelector('aside').classList.toggle('open');
+  document.querySelector('.sidebar-overlay').classList.toggle('open');
+}
+function closeSidebar() {
+  document.querySelector('aside').classList.remove('open');
+  document.querySelector('.sidebar-overlay').classList.remove('open');
+}
+
 // Boot
 document.getElementById('team-count').textContent = `${DATA.teams.length} teams`;
 rebuildSidebar();
 restoreNav() || showOverview();
 </script>
+<div class="sidebar-overlay" onclick="closeSidebar()"></div>
 </body>
 </html>
 """
 
 
-def build_html(data: dict) -> str:
+def build_html(data: dict, title: str, timestamp: str) -> str:
     embedded = json.dumps(data, separators=(",", ":"))
-    return HTML_TEMPLATE.replace("__DATA__", embedded)
+    return (HTML_TEMPLATE
+            .replace("__DATA__", embedded)
+            .replace("__TITLE__", title)
+            .replace("__TIMESTAMP__", timestamp))
+
+
+def write_view(event_prefix: str | None, out_path: str, title: str, timestamp: str) -> None:
+    data = load_data(DB_PATH, event_prefix)
+    print(f"  {data['overview']['total_teams']} teams, {data['overview']['total_matches']} matches  →  {out_path}")
+    html = build_html(data, title, timestamp)
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(html)
+
+
+INDEX_TEMPLATE = """\
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>TBA 2026 — Dashboard Index</title>
+  <style>
+    :root{{--bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e334d;
+          --accent:#4f8ef7;--text:#e4e6f0;--muted:#7b82a0;}}
+    *{{box-sizing:border-box;margin:0;padding:0;}}
+    body{{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);
+          min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:48px 16px;}}
+    h1{{font-size:1.5rem;font-weight:700;color:var(--accent);margin-bottom:6px;}}
+    .ts{{color:var(--muted);font-size:.8rem;margin-bottom:36px;}}
+    .grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;width:100%;max-width:800px;}}
+    a.card{{display:block;background:var(--surface);border:1px solid var(--border);border-radius:10px;
+            padding:20px 22px;text-decoration:none;color:var(--text);transition:border-color .15s,background .15s;}}
+    a.card:hover{{border-color:var(--accent);background:var(--surface2);}}
+    .card-title{{font-weight:700;font-size:1rem;color:var(--accent);margin-bottom:4px;}}
+    .card-sub{{font-size:.78rem;color:var(--muted);}}
+  </style>
+</head>
+<body>
+  <h1>TBA 2026 Dashboard</h1>
+  <div class="ts">Generated {timestamp}</div>
+  <div class="grid">
+{cards}
+  </div>
+</body>
+</html>
+"""
+
+
+def build_index(pages: list[tuple[str, str, str]], timestamp: str) -> str:
+    """pages: list of (filename, title, subtitle)"""
+    cards = "\n".join(
+        f'    <a class="card" href="{fname}">'
+        f'<div class="card-title">{title}</div>'
+        f'<div class="card-sub">{sub}</div></a>'
+        for fname, title, sub in pages
+    )
+    return INDEX_TEMPLATE.format(timestamp=timestamp, cards=cards)
 
 
 def main():
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
     print(f"Loading data from {DB_PATH}...")
-    data = load_data(DB_PATH)
-    print(f"  {data['overview']['total_teams']} teams, {data['overview']['total_matches']} matches")
 
-    html = build_html(data)
-    with open(OUT_PATH, "w", encoding="utf-8") as f:
-        f.write(html)
-    print(f"Wrote {OUT_PATH}")
+    # discover all event prefixes (first 8 chars of match_key)
+    con = sqlite3.connect(DB_PATH)
+    event_prefixes = [r[0] for r in con.execute(
+        "SELECT DISTINCT substr(match_key,1,8) FROM score_breakdowns ORDER BY 1"
+    ).fetchall()]
+    con.close()
+
+    pages = []
+
+    write_view(None, "Region Wide.html", "TBA 2026 — Region Wide", timestamp)
+    data_rw = load_data(DB_PATH)
+    pages.append(("Region Wide.html", "Region Wide",
+                  f"{data_rw['overview']['total_teams']} teams · {data_rw['overview']['total_matches']} matches"))
+
+    for ep in event_prefixes:
+        fname = f"{ep}.html"
+        title = f"TBA 2026 — {ep}"
+        write_view(ep, fname, title, timestamp)
+        d = load_data(DB_PATH, ep)
+        pages.append((fname, ep,
+                      f"{d['overview']['total_teams']} teams · {d['overview']['total_matches']} matches"))
+
+    index_html = build_index(pages, timestamp)
+    with open("index.html", "w", encoding="utf-8") as f:
+        f.write(index_html)
+    print(f"  index.html  →  {len(pages)} pages listed")
+
+    print(f"Done. Generated {2 + len(event_prefixes)} file(s).")
 
 
 if __name__ == "__main__":
