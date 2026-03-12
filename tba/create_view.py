@@ -325,8 +325,42 @@ def load_data(db_path: str, event_prefix: str | None = None) -> dict:
         "bracket":       bracket,
     }
 
+    # ── Schedule: all matches ─────────────────────────────────────────────────
+    sched_cond = "AND substr(key,1,8)=?" if ep else ""
+    sched_args = (ep,) if ep else ()
+    schedule = []
+    sched_rows = con.execute(f"""
+        SELECT key, event_key, comp_level, set_number, match_number,
+               COALESCE(actual_time, time, predicted_time) AS sched_time,
+               winning_alliance
+        FROM matches
+        WHERE 1=1 {sched_cond}
+        ORDER BY COALESCE(actual_time, time, predicted_time, 9999999999), comp_level, set_number, match_number
+    """, sched_args).fetchall()
+    for row in sched_rows:
+        mk = row["key"]
+        teams_by_color: dict = {"red": [], "blue": []}
+        for trow in con.execute(
+            "SELECT color, team_key FROM alliance_teams WHERE match_key = ? ORDER BY id", (mk,)
+        ):
+            teams_by_color[trow["color"]].append(trow["team_key"])
+        if teams_by_color["red"] or teams_by_color["blue"]:
+            schedule.append({
+                "match_key":      mk,
+                "event":          row["event_key"],
+                "comp_level":     row["comp_level"],
+                "set_number":     row["set_number"],
+                "match_number":   row["match_number"],
+                "sched_time":     row["sched_time"],
+                "winner":         row["winning_alliance"] or None,
+                "red":            teams_by_color["red"],
+                "blue":           teams_by_color["blue"],
+                "red_score":      alliance_scores.get((mk, "red")),
+                "blue_score":     alliance_scores.get((mk, "blue")),
+            })
+
     con.close()
-    return {"teams": teams, "overview": overview}
+    return {"teams": teams, "overview": overview, "schedule": schedule}
 
 
 # ── HTML template ─────────────────────────────────────────────────────────────
@@ -385,6 +419,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     .page-header h2{font-size:1.4rem;font-weight:700;}
     .page-header h2 span{color:var(--accent);}
     .page-header p{color:var(--muted);font-size:.85rem;margin-top:4px;}
+    .data-warning{display:flex;align-items:center;gap:8px;background:rgba(224,196,92,.08);border:1px solid rgba(224,196,92,.35);border-radius:8px;padding:9px 14px;margin-bottom:16px;font-size:.82rem;color:var(--yellow);}
     .ext-link{display:inline-flex;align-items:center;gap:4px;font-size:.78rem;color:var(--accent);text-decoration:none;}
     .ext-link:hover{text-decoration:underline;}
 
@@ -506,6 +541,23 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     .bracket-dot.blue{background:var(--accent);}
     .bracket-teams{flex:1;font-size:.7rem;color:var(--text);}
     .bracket-score{font-size:.78rem;font-weight:700;color:var(--text);min-width:26px;text-align:right;}
+
+    /* Schedule view */
+    #schedule-view{display:none;}
+    .schedule-alliances{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);}
+    .schedule-alliance{padding:10px 14px;}
+    .schedule-alliance.red{background:rgba(224,92,92,.06);}
+    .schedule-alliance.blue{background:rgba(79,142,247,.06);}
+    .alliance-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+    .alliance-label.red{color:var(--red);}
+    .alliance-label.blue{color:var(--accent);}
+    .alliance-team{display:flex;align-items:center;gap:8px;padding:3px 0;}
+    .alliance-team-num{font-weight:700;font-size:.88rem;color:var(--text);cursor:pointer;}
+    .alliance-team-num:hover{color:var(--accent);}
+    .alliance-team-stat{font-size:.72rem;color:var(--muted);}
+    .compare-match-btn{font-size:.75rem;font-weight:600;color:var(--accent);background:rgba(79,142,247,.12);border:1px solid rgba(79,142,247,.3);border-radius:4px;padding:2px 7px;white-space:nowrap;cursor:pointer;}
+    .compare-match-btn:hover{background:rgba(79,142,247,.25);}
+    .winner-alliance{background:rgba(76,175,130,.1)!important;}
   </style>
 </head>
 <body>
@@ -548,6 +600,14 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
         </svg>
         Overview
       </button>
+      <button class="overview-btn" id="schedule-btn" onclick="showSchedule()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        Schedule
+        <span id="schedule-count" style="margin-left:auto;font-size:.7rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1px 6px;color:var(--muted);"></span>
+      </button>
       <div id="team-list"></div>
     </div>
     <button id="show-hidden-btn" onclick="showAllHidden()"></button>
@@ -564,6 +624,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     <div id="team-view"></div>
     <div id="overview-view"></div>
     <div id="compare-view"></div>
+    <div id="schedule-view"></div>
   </main>
 </div>
 <footer>FRC 272 · TBA Match Data 2026</footer>
@@ -596,9 +657,10 @@ function makeChart(id, cfg) {
 }
 
 function hideAll() {
-  ['placeholder','team-view','overview-view','compare-view'].forEach(id => document.getElementById(id).style.display='none');
+  ['placeholder','team-view','overview-view','compare-view','schedule-view'].forEach(id => document.getElementById(id).style.display='none');
   document.querySelectorAll('.team-item').forEach(el => el.classList.remove('active'));
   document.getElementById('overview-btn').classList.remove('active');
+  document.getElementById('schedule-btn').classList.remove('active');
 }
 
 // ── Compare ───────────────────────────────────────────────────────────────────
@@ -671,7 +733,7 @@ function showComparison() {
   if (compareSet.size < 2) return;
   hideAll();
   saveNav({view: 'compare', keys: [...compareSet]});
-  const teams = DATA.teams.filter(t => compareSet.has(t.key));
+  const teams = [...compareSet].map(k => DATA.teams.find(t => t.key === k)).filter(Boolean);
 
   const cv = document.getElementById('compare-view');
   cv.innerHTML = `
@@ -754,6 +816,104 @@ function showComparison() {
     borderWidth:1 }]}, options: baseOpts()});
 }
 
+// ── Schedule View ─────────────────────────────────────────────────────────────
+function renderAllianceTeam(key) {
+  const t = DATA.teams.find(t => t.key === key);
+  const n = key.replace('frc','');
+  const stat = t ? (t.opr !== null ? `OPR ${t.opr}` : t.contrib_avg !== null ? `Avg ${t.contrib_avg}` : '') : '';
+  return `<div class="alliance-team">
+    <span class="alliance-team-num" onclick="loadTeam('${key}')">#${n}${t&&t.nickname?` <span style="font-weight:400;color:var(--muted);font-size:.75rem;">${t.nickname}</span>`:''}
+    </span>
+    ${stat ? `<span class="alliance-team-stat">${stat}</span>` : ''}
+  </div>`;
+}
+function compareMatch(matchKey) {
+  const m = DATA.schedule.find(m => m.match_key === matchKey);
+  if (!m) return;
+  clearCompare();
+  [...m.red, ...m.blue].forEach(k => { if (DATA.teams.find(t => t.key === k)) compareSet.add(k); });
+  updateCompareBar(); updateCheckboxStates();
+  showComparison();
+}
+function scheduleMatchCard(m) {
+  const lbl = matchLabel(m);
+  const timeStr = m.sched_time
+    ? new Date(m.sched_time * 1000).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})
+    : '';
+  const compareBtn = `<button class="compare-match-btn" style="margin-left:auto;" onclick="compareMatch('${m.match_key}')">Compare</button>`;
+  const redWin  = m.winner === 'red';
+  const blueWin = m.winner === 'blue';
+  const decided = m.winner != null;
+  const allNums = [...m.red, ...m.blue].map(k => k.replace('frc','')).join(' ');
+  return `<div class="match-card" data-teams="${allNums}">
+    <div class="match-card-header">
+      <span class="match-label">${lbl}</span>
+      <span class="event-tag">${eventShort(m.event)}</span>
+      ${timeStr ? `<span style="font-size:.78rem;color:var(--muted);">${timeStr}</span>` : ''}
+      ${compareBtn}
+    </div>
+    <div class="schedule-alliances">
+      <div class="schedule-alliance red${redWin?' winner-alliance':''}">
+        <div class="alliance-label red" style="display:flex;align-items:center;gap:6px;">
+          Red Alliance
+          ${decided ? `<span style="margin-left:auto;font-weight:700;font-size:.78rem;color:${redWin?'var(--green)':'var(--muted)'};">${m.red_score ?? '—'}</span>` : ''}
+          ${redWin ? `<span class="result-win" style="font-size:.7rem;">WIN</span>` : ''}
+        </div>
+        ${m.red.map(renderAllianceTeam).join('')}
+      </div>
+      <div class="schedule-alliance blue${blueWin?' winner-alliance':''}">
+        <div class="alliance-label blue" style="display:flex;align-items:center;gap:6px;">
+          Blue Alliance
+          ${decided ? `<span style="margin-left:auto;font-weight:700;font-size:.78rem;color:${blueWin?'var(--green)':'var(--muted)'};">${m.blue_score ?? '—'}</span>` : ''}
+          ${blueWin ? `<span class="result-win" style="font-size:.7rem;">WIN</span>` : ''}
+        </div>
+        ${m.blue.map(renderAllianceTeam).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+function filterSchedule(q) {
+  const term = q.trim().replace(/^frc/i, '');
+  let shown = 0;
+  document.querySelectorAll('#sched-matches .match-card').forEach(card => {
+    const visible = !term || card.dataset.teams.split(' ').some(n => n.startsWith(term));
+    card.style.display = visible ? '' : 'none';
+    if (visible) shown++;
+  });
+  document.getElementById('sched-shown').textContent = shown;
+}
+function showSchedule() {
+  hideAll();
+  saveNav({view: 'schedule'});
+  closeSidebar();
+  document.getElementById('schedule-btn').classList.add('active');
+  const sched = DATA.schedule || [];
+  const sv = document.getElementById('schedule-view');
+  if (sched.length === 0) {
+    sv.innerHTML = `<div class="page-header"><h2>Schedule</h2><p style="color:var(--muted)">No matches found.</p></div>`;
+    sv.style.display = 'block';
+    return;
+  }
+  const played = sched.filter(m => m.winner).length;
+  const upcoming = sched.length - played;
+  sv.innerHTML = `
+    <div class="page-header">
+      <h2>Schedule</h2>
+      <p>${sched.length} match${sched.length !== 1 ? 'es' : ''} · ${played} played · ${upcoming} upcoming</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+      <input id="sched-filter" type="text" placeholder="Filter by team number…"
+             style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 11px;color:var(--text);font-size:.85rem;width:220px;outline:none;"
+             oninput="filterSchedule(this.value)"
+             onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+      <span style="font-size:.8rem;color:var(--muted);"><span id="sched-shown">${sched.length}</span> shown</span>
+    </div>
+    <div class="matches-grid" id="sched-matches">
+      ${sched.map(scheduleMatchCard).join('')}
+    </div>`;
+  sv.style.display = 'block';
+}
+
 function towerBadge(val) {
   if (!val) return '<span class="tower-none">—</span>';
   return `<span class="tower-level">${val}</span>`;
@@ -797,6 +957,7 @@ function loadTeam(key) {
 
   const tv = document.getElementById('team-view');
   tv.innerHTML = `
+    ${t.played < 3 ? `<div class="data-warning"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Only ${t.played} match${t.played !== 1 ? 'es' : ''} played — data may not be actionable</div>` : ''}
     <div class="page-header">
       <h2><span>#${t.num}</span>${t.nickname ? ' ' + t.nickname : ''}</h2>
       <p>${t.played} match${t.played!==1?'es':''} · ${t.events.join(', ')}</p>
@@ -868,6 +1029,7 @@ function loadTeam(key) {
             <span class="event-tag">${eventShort(m.event)}</span>
             <span class="match-score">${m.score ?? '—'} pts</span>
             ${videoLink}
+            <button class="compare-match-btn" onclick="compareMatch('${m.match_key}')">Compare</button>
           </div>
           <div class="match-fields">
             <div class="field"><div class="field-label">Auto Tower</div>
@@ -1157,6 +1319,8 @@ function restoreNav() {
     state.keys.forEach(k => { if (DATA.teams.find(t => t.key === k)) compareSet.add(k); });
     updateCompareBar(); updateCheckboxStates();
     showComparison();
+  } else if (state.view === 'schedule') {
+    showSchedule();
   }
 }
 
@@ -1172,6 +1336,8 @@ function closeSidebar() {
 
 // Boot
 document.getElementById('team-count').textContent = `${DATA.teams.length} teams`;
+const _schedUpcoming = (DATA.schedule || []).filter(m => !m.winner).length;
+if (_schedUpcoming > 0) document.getElementById('schedule-count').textContent = _schedUpcoming;
 rebuildSidebar();
 restoreNav() || showOverview();
 </script>
