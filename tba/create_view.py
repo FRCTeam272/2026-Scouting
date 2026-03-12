@@ -414,7 +414,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     <div id="compare-view"></div>
   </main>
 </div>
-<footer>FRC 708 · TBA Match Data 2026</footer>
+<footer>FRC 272 · TBA Match Data 2026</footer>
 
 <script>
 const DATA = __DATA__;
