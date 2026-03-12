@@ -16,6 +16,8 @@ python read_scouting.py
 
 ## Hosting
 
-if this is actevly hosted it will be at
-
+Hosted at:
 https://frcteam272.github.io/2026-Scouting
+
+To view only the blue alliance data:
+https://frcteam272.github.io/2026-Scouting/tba/
