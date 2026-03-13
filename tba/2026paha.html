@@ -83,6 +83,7 @@
     .match-color.blue{background:rgba(79,142,247,.2);color:var(--accent);}
     .result-win{color:var(--green);font-weight:700;font-size:.75rem;}
     .result-loss{color:var(--red);font-weight:700;font-size:.75rem;}
+    .result-tie{color:var(--muted);font-weight:700;font-size:.75rem;}
     .result-tbd{color:var(--muted);font-size:.75rem;}
     .event-tag{font-size:.7rem;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;}
     .match-score{margin-left:auto;font-size:.85rem;font-weight:700;color:var(--text);}
@@ -202,7 +203,7 @@
   </button>
   <h1>TBA 2026 — Hatboro-Horsham</h1>
   <span id="team-count"></span>
-  <span id="ts-label" style="color:var(--muted);font-size:.75rem;white-space:nowrap;">Generated 2026-03-12 16:37</span>
+  <span id="ts-label" style="color:var(--muted);font-size:.75rem;white-space:nowrap;">Generated 2026-03-13 14:05</span>
   <input id="search" type="text" placeholder="Search team..."/>
   <select id="sort-by" title="Sort teams by">
     <option value="tower">Tower usage</option>
@@ -393,8 +394,8 @@ function showComparison() {
           <div class="compare-block-header">#${t.num}${t.nickname ? ' · '+t.nickname : ''} · ${t.played}m</div>
           ${t.match_history.map(m => {
             const lbl = matchLabel(m);
-            const resultCls = m.won===true?'result-win':m.won===false?'result-loss':'result-tbd';
-            const resultText = m.won===true?'WIN':m.won===false?'LOSS':'TBD';
+            const resultCls = m.won===true?'result-win':m.won===false?'result-loss':m.won==='tie'?'result-tie':'result-tbd';
+            const resultText = m.won===true?'WIN':m.won===false?'LOSS':m.won==='tie'?'TIE':'TBD';
             const videoLink = m.video_url ? `<a class="video-link" href="${m.video_url}" target="_blank">▶</a>` : '';
             return `<div class="match-card" style="border-radius:0;border-left:none;border-right:none;border-top:none;">
               <div class="match-card-header">
@@ -476,13 +477,15 @@ function scheduleMatchCard(m) {
   const compareBtn = `<button class="compare-match-btn" style="margin-left:auto;" onclick="compareMatch('${m.match_key}')">Compare</button>`;
   const redWin  = m.winner === 'red';
   const blueWin = m.winner === 'blue';
+  const tie     = m.winner === 'tie';
   const decided = m.winner != null;
   const allNums = [...m.red, ...m.blue].map(k => k.replace('frc','')).join(' ');
-  return `<div class="match-card" data-teams="${allNums}" data-played="${m.winner ? '1' : '0'}">
+  return `<div class="match-card" data-teams="${allNums}" data-played="${decided ? '1' : '0'}">
     <div class="match-card-header">
       <span class="match-label">${lbl}</span>
       <span class="event-tag">${eventShort(m.event)}</span>
       ${timeStr ? `<span style="font-size:.78rem;color:var(--muted);">${timeStr}</span>` : ''}
+      ${decided && tie ? `<span class="result-tie" style="font-size:.7rem;">TIE</span>` : ''}
       ${compareBtn}
     </div>
     <div class="schedule-alliances">
@@ -680,8 +683,8 @@ function loadTeam(key) {
     <div class="matches-grid">
       ${t.match_history.map(m => {
         const lbl = matchLabel(m);
-        const resultCls  = m.won === true ? 'result-win' : m.won === false ? 'result-loss' : 'result-tbd';
-        const resultText = m.won === true ? 'WIN' : m.won === false ? 'LOSS' : 'TBD';
+        const resultCls  = m.won === true ? 'result-win' : m.won === false ? 'result-loss' : m.won === 'tie' ? 'result-tie' : 'result-tbd';
+        const resultText = m.won === true ? 'WIN' : m.won === false ? 'LOSS' : m.won === 'tie' ? 'TIE' : 'TBD';
         const videoLink  = m.video_url ? `<a class="video-link" href="${m.video_url}" target="_blank">▶ Video</a>` : '';
         return `<div class="match-card">
           <div class="match-card-header">
