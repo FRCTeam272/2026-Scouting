@@ -1499,7 +1499,7 @@ INDEX_TEMPLATE = """\
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>TBA 2026 — Dashboard Index</title>
+  <title>FRC272's TBA Powered Dashboard — Index</title>
   <style>
     :root{{--bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e334d;
           --accent:#4f8ef7;--text:#e4e6f0;--muted:#7b82a0;--gold:#f5c542;}}
@@ -1523,7 +1523,7 @@ INDEX_TEMPLATE = """\
   </style>
 </head>
 <body>
-  <h1>TBA 2026 Dashboard</h1>
+  <h1>FRC272's TBA Powered Dashboard 2026 Edition</h1>
   <div class="ts">Generated {timestamp}</div>
   <div class="grid" id="grid">
 {cards}
