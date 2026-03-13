@@ -136,7 +136,13 @@ def load_data(db_path: str, event_prefix: str | None = None) -> dict:
             bd    = breakdowns.get((mk, color), {})
             hub   = hub_scores.get((mk, color), {})
             score = alliance_scores.get((mk, color))
-            won   = meta.get("winning_alliance") == color if meta.get("winning_alliance") else None
+            wa = meta.get("winning_alliance")
+            if wa:  # "red" or "blue"
+                won = (wa == color)
+            elif score is not None and score != -1:  # played, no winner = tie
+                won = "tie"
+            else:
+                won = None
 
             robot_num = team_pos.get((mk, color, tk))
             auto_tower = endgame_tower = None
@@ -352,6 +358,9 @@ def load_data(db_path: str, event_prefix: str | None = None) -> dict:
         ):
             teams_by_color[trow["color"]].append(trow["team_key"])
         if teams_by_color["red"] or teams_by_color["blue"]:
+            _rs = alliance_scores.get((mk, "red"))
+            _played = _rs is not None and _rs != -1
+            _wa = row["winning_alliance"]
             schedule.append({
                 "match_key":      mk,
                 "event":          row["event_key"],
@@ -359,10 +368,10 @@ def load_data(db_path: str, event_prefix: str | None = None) -> dict:
                 "set_number":     row["set_number"],
                 "match_number":   row["match_number"],
                 "sched_time":     row["sched_time"],
-                "winner":         row["winning_alliance"] or None,
+                "winner":         (_wa if _wa else "tie") if _played else None,
                 "red":            teams_by_color["red"],
                 "blue":           teams_by_color["blue"],
-                "red_score":      alliance_scores.get((mk, "red")),
+                "red_score":      _rs,
                 "blue_score":     alliance_scores.get((mk, "blue")),
             })
 
@@ -457,6 +466,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     .match-color.blue{background:rgba(79,142,247,.2);color:var(--accent);}
     .result-win{color:var(--green);font-weight:700;font-size:.75rem;}
     .result-loss{color:var(--red);font-weight:700;font-size:.75rem;}
+    .result-tie{color:var(--muted);font-weight:700;font-size:.75rem;}
     .result-tbd{color:var(--muted);font-size:.75rem;}
     .event-tag{font-size:.7rem;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;}
     .match-score{margin-left:auto;font-size:.85rem;font-weight:700;color:var(--text);}
@@ -767,8 +777,8 @@ function showComparison() {
           <div class="compare-block-header">#${t.num}${t.nickname ? ' · '+t.nickname : ''} · ${t.played}m</div>
           ${t.match_history.map(m => {
             const lbl = matchLabel(m);
-            const resultCls = m.won===true?'result-win':m.won===false?'result-loss':'result-tbd';
-            const resultText = m.won===true?'WIN':m.won===false?'LOSS':'TBD';
+            const resultCls = m.won===true?'result-win':m.won===false?'result-loss':m.won==='tie'?'result-tie':'result-tbd';
+            const resultText = m.won===true?'WIN':m.won===false?'LOSS':m.won==='tie'?'TIE':'TBD';
             const videoLink = m.video_url ? `<a class="video-link" href="${m.video_url}" target="_blank">▶</a>` : '';
             return `<div class="match-card" style="border-radius:0;border-left:none;border-right:none;border-top:none;">
               <div class="match-card-header">
@@ -850,13 +860,15 @@ function scheduleMatchCard(m) {
   const compareBtn = `<button class="compare-match-btn" style="margin-left:auto;" onclick="compareMatch('${m.match_key}')">Compare</button>`;
   const redWin  = m.winner === 'red';
   const blueWin = m.winner === 'blue';
+  const tie     = m.winner === 'tie';
   const decided = m.winner != null;
   const allNums = [...m.red, ...m.blue].map(k => k.replace('frc','')).join(' ');
-  return `<div class="match-card" data-teams="${allNums}" data-played="${m.winner ? '1' : '0'}">
+  return `<div class="match-card" data-teams="${allNums}" data-played="${decided ? '1' : '0'}">
     <div class="match-card-header">
       <span class="match-label">${lbl}</span>
       <span class="event-tag">${eventShort(m.event)}</span>
       ${timeStr ? `<span style="font-size:.78rem;color:var(--muted);">${timeStr}</span>` : ''}
+      ${decided && tie ? `<span class="result-tie" style="font-size:.7rem;">TIE</span>` : ''}
       ${compareBtn}
     </div>
     <div class="schedule-alliances">
@@ -1054,8 +1066,8 @@ function loadTeam(key) {
     <div class="matches-grid">
       ${t.match_history.map(m => {
         const lbl = matchLabel(m);
-        const resultCls  = m.won === true ? 'result-win' : m.won === false ? 'result-loss' : 'result-tbd';
-        const resultText = m.won === true ? 'WIN' : m.won === false ? 'LOSS' : 'TBD';
+        const resultCls  = m.won === true ? 'result-win' : m.won === false ? 'result-loss' : m.won === 'tie' ? 'result-tie' : 'result-tbd';
+        const resultText = m.won === true ? 'WIN' : m.won === false ? 'LOSS' : m.won === 'tie' ? 'TIE' : 'TBD';
         const videoLink  = m.video_url ? `<a class="video-link" href="${m.video_url}" target="_blank">▶ Video</a>` : '';
         return `<div class="match-card">
           <div class="match-card-header">
@@ -1409,6 +1421,78 @@ def write_view(event_prefix: str | None, out_path: str, title: str, timestamp: s
         f.write(html)
 
 
+UPCOMING_TEMPLATE = """\
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>__TITLE__</title>
+  <style>
+    :root{--bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e334d;
+          --accent:#4f8ef7;--text:#e4e6f0;--muted:#7b82a0;--green:#4ade80;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);
+          min-height:100vh;padding:40px 20px;}
+    .page-wrap{max-width:700px;margin:0 auto;}
+    h1{font-size:1.5rem;font-weight:700;color:var(--accent);margin-bottom:4px;}
+    .meta{font-size:.8rem;color:var(--muted);margin-bottom:8px;}
+    .badge{display:inline-block;font-size:.7rem;font-weight:600;color:var(--accent);
+            background:rgba(79,142,247,.12);border:1px solid rgba(79,142,247,.3);
+            border-radius:4px;padding:2px 8px;margin-bottom:28px;}
+    .team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
+    .team-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;
+                padding:12px 14px;}
+    .team-num{font-size:1rem;font-weight:700;color:var(--accent);}
+    .team-name{font-size:.78rem;color:var(--muted);margin-top:2px;white-space:nowrap;
+                overflow:hidden;text-overflow:ellipsis;}
+    .back{display:inline-block;margin-bottom:24px;font-size:.82rem;color:var(--muted);
+           text-decoration:none;}
+    .back:hover{color:var(--accent);}
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+  <a class="back" href="index.html">← Back to index</a>
+  <h1>__TITLE__</h1>
+  <div class="meta">Generated __TIMESTAMP__</div>
+  <div class="badge">Upcoming — no matches yet</div>
+  <div class="team-grid">
+__TEAM_CARDS__
+  </div>
+</div>
+</body>
+</html>
+"""
+
+
+def write_upcoming_page(event_key: str, out_path: str, title: str, timestamp: str) -> int:
+    con = sqlite3.connect(DB_PATH)
+    con.row_factory = sqlite3.Row
+    rows = con.execute("""
+        SELECT et.team_key, t.nickname
+        FROM event_teams et
+        LEFT JOIN teams t ON t.team_key = et.team_key
+        WHERE et.event_key = ?
+        ORDER BY CAST(SUBSTR(et.team_key, 4) AS INTEGER)
+    """, (event_key,)).fetchall()
+    con.close()
+
+    cards = "\n".join(
+        f'    <div class="team-card">'
+        f'<div class="team-num">#{r["team_key"].replace("frc", "")}</div>'
+        f'<div class="team-name">{r["nickname"] or ""}</div></div>'
+        for r in rows
+    )
+    html = (UPCOMING_TEMPLATE
+            .replace("__TITLE__", title)
+            .replace("__TIMESTAMP__", timestamp)
+            .replace("__TEAM_CARDS__", cards))
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(html)
+    return len(rows)
+
+
 INDEX_TEMPLATE = """\
 <!DOCTYPE html>
 <html lang="en">
@@ -1418,26 +1502,64 @@ INDEX_TEMPLATE = """\
   <title>TBA 2026 — Dashboard Index</title>
   <style>
     :root{{--bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e334d;
-          --accent:#4f8ef7;--text:#e4e6f0;--muted:#7b82a0;}}
+          --accent:#4f8ef7;--text:#e4e6f0;--muted:#7b82a0;--gold:#f5c542;}}
     *{{box-sizing:border-box;margin:0;padding:0;}}
     body{{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);
           min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:48px 16px;}}
     h1{{font-size:1.5rem;font-weight:700;color:var(--accent);margin-bottom:6px;}}
     .ts{{color:var(--muted);font-size:.8rem;margin-bottom:36px;}}
     .grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;width:100%;max-width:800px;}}
+    .card-wrap{{position:relative;}}
     a.card{{display:block;background:var(--surface);border:1px solid var(--border);border-radius:10px;
             padding:20px 22px;text-decoration:none;color:var(--text);transition:border-color .15s,background .15s;}}
     a.card:hover{{border-color:var(--accent);background:var(--surface2);}}
+    a.card.fav{{border-color:var(--gold);}}
     .card-title{{font-weight:700;font-size:1rem;color:var(--accent);margin-bottom:4px;}}
     .card-sub{{font-size:.78rem;color:var(--muted);}}
+    .fav-btn{{position:absolute;top:10px;right:10px;background:none;border:none;cursor:pointer;
+              font-size:1.1rem;line-height:1;opacity:.35;transition:opacity .15s;padding:2px;}}
+    .fav-btn:hover{{opacity:.7;}}
+    .fav-btn.active{{opacity:1;}}
   </style>
 </head>
 <body>
   <h1>TBA 2026 Dashboard</h1>
   <div class="ts">Generated {timestamp}</div>
-  <div class="grid">
+  <div class="grid" id="grid">
 {cards}
   </div>
+<script>
+const FAVS_KEY = 'tba_index_favs';
+function getFavs() {{
+  try {{ return new Set(JSON.parse(localStorage.getItem(FAVS_KEY) || '[]')); }}
+  catch {{ return new Set(); }}
+}}
+function saveFavs(set) {{
+  localStorage.setItem(FAVS_KEY, JSON.stringify([...set]));
+}}
+function toggleFav(fname, btn) {{
+  const favs = getFavs();
+  if (favs.has(fname)) {{ favs.delete(fname); }} else {{ favs.add(fname); }}
+  saveFavs(favs);
+  applyFavs();
+}}
+function applyFavs() {{
+  const favs = getFavs();
+  const grid = document.getElementById('grid');
+  const wraps = [...grid.querySelectorAll('.card-wrap')];
+  wraps.forEach(w => {{
+    const fname = w.dataset.fname;
+    const isFav = favs.has(fname);
+    w.querySelector('.fav-btn').classList.toggle('active', isFav);
+    w.querySelector('a.card').classList.toggle('fav', isFav);
+  }});
+  // move favourites to front, preserve original order within each group
+  const favWraps   = wraps.filter(w => favs.has(w.dataset.fname));
+  const otherWraps = wraps.filter(w => !favs.has(w.dataset.fname));
+  [...favWraps, ...otherWraps].forEach(w => grid.appendChild(w));
+}}
+applyFavs();
+</script>
 </body>
 </html>
 """
@@ -1446,9 +1568,12 @@ INDEX_TEMPLATE = """\
 def build_index(pages: list[tuple[str, str, str]], timestamp: str) -> str:
     """pages: list of (filename, title, subtitle)"""
     cards = "\n".join(
-        f'    <a class="card" href="{fname}">'
+        f'    <div class="card-wrap" data-fname="{fname}">'
+        f'<a class="card" href="{fname}">'
         f'<div class="card-title">{title}</div>'
         f'<div class="card-sub">{sub}</div></a>'
+        f'<button class="fav-btn" onclick="toggleFav(\'{fname}\',this)" title="Favourite">★</button>'
+        f'</div>'
         for fname, title, sub in pages
     )
     return INDEX_TEMPLATE.format(timestamp=timestamp, cards=cards)
@@ -1460,9 +1585,19 @@ def main():
 
     # discover all event prefixes (first 8 chars of match_key)
     con = sqlite3.connect(DB_PATH)
+    con.execute("""CREATE TABLE IF NOT EXISTS event_teams (
+        event_key TEXT NOT NULL, team_key TEXT NOT NULL,
+        PRIMARY KEY (event_key, team_key))""")
     event_prefixes = [r[0] for r in con.execute(
         "SELECT DISTINCT substr(match_key,1,8) FROM score_breakdowns ORDER BY 1"
     ).fetchall()]
+    # upcoming events: in event_teams but no matches yet
+    upcoming_events = [r[0] for r in con.execute("""
+        SELECT DISTINCT et.event_key FROM event_teams et
+        WHERE NOT EXISTS (
+            SELECT 1 FROM matches m WHERE substr(m.key, 1, 8) = et.event_key)
+        ORDER BY et.event_key
+    """).fetchall()]
     con.close()
 
     pages = []
@@ -1481,12 +1616,20 @@ def main():
         pages.append((fname, display,
                       f"{d['overview']['total_teams']} teams · {d['overview']['total_matches']} matches"))
 
+    for ep in upcoming_events:
+        fname = f"{ep}.html"
+        display = EVENT_NAMES.get(ep[:8], ep)
+        title = f"TBA 2026 — {display}"
+        n = write_upcoming_page(ep, fname, title, timestamp)
+        print(f"  {n} teams (upcoming)  →  {fname}")
+        pages.append((fname, display, f"{n} teams · upcoming"))
+
     index_html = build_index(pages, timestamp)
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(index_html)
     print(f"  index.html  →  {len(pages)} pages listed")
 
-    print(f"Done. Generated {2 + len(event_prefixes)} file(s).")
+    print(f"Done. Generated {2 + len(event_prefixes) + len(upcoming_events)} file(s).")
 
 
 if __name__ == "__main__":

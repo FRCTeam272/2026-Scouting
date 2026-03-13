@@ -14,6 +14,7 @@ import json
 import os
 import sqlite3
 import sys
+from time import sleep
 
 TBA_BASE = "https://www.thebluealliance.com/api/v3"
 TBA_MIN_MATCHES = 80
@@ -31,14 +32,25 @@ def _tba_fetch_matches(event_key: str) -> list:
     import requests
     url = f"{TBA_BASE}/event/{event_key}/matches"
     resp = requests.get(url, headers=_tba_headers())
+    sleep(0.5)  # be nice to TBA's servers
     resp.raise_for_status()
     return resp.json()
+
+
+def _tba_fetch_event_team_keys(event_key: str) -> list:
+    import requests
+    url = f"{TBA_BASE}/event/{event_key}/teams/keys"
+    resp = requests.get(url, headers=_tba_headers())
+    sleep(0.5)  # be nice to TBA's servers
+    resp.raise_for_status()
+    return resp.json()  # list of "frc####" strings
 
 
 def _tba_fetch_district_events(district_key: str) -> list:
     import requests
     url = f"{TBA_BASE}/district/{district_key}/events/keys"
     resp = requests.get(url, headers=_tba_headers())
+    sleep(0.5)  # be nice to TBA's servers
     resp.raise_for_status()
     return resp.json()  # list of event key strings
 
@@ -163,6 +175,12 @@ CREATE TABLE IF NOT EXISTS teams (
     city     TEXT,
     state    TEXT,
     country  TEXT
+);
+
+CREATE TABLE IF NOT EXISTS event_teams (
+    event_key TEXT NOT NULL,
+    team_key  TEXT NOT NULL,
+    PRIMARY KEY (event_key, team_key)
 );
 """
 
@@ -328,13 +346,16 @@ def _sync_team_names(con: sqlite3.Connection) -> None:
     """Fetch TBA team info for any team_key not yet in the teams table."""
     import requests
     known = {row[0] for row in con.execute("SELECT team_key FROM teams")}
-    needed = {row[0] for row in con.execute("SELECT DISTINCT team_key FROM alliance_teams")} - known
+    from_matches = {row[0] for row in con.execute("SELECT DISTINCT team_key FROM alliance_teams")}
+    from_events = {row[0] for row in con.execute("SELECT DISTINCT team_key FROM event_teams")}
+    needed = (from_matches | from_events) - known
     if not needed:
         return
     headers = _tba_headers()
     for tk in sorted(needed):
         try:
             resp = requests.get(f"{TBA_BASE}/team/{tk}", headers=headers)
+            sleep(0.5)  # be nice to TBA's servers
             resp.raise_for_status()
             d = resp.json()
             con.execute(
@@ -347,6 +368,7 @@ def _sync_team_names(con: sqlite3.Connection) -> None:
             print(f"  Stored team info for {tk}: {d.get('nickname')}")
         except Exception as e:
             print(f"  Warning: could not fetch {tk}: {e}")
+            sleep(0.5)  # be nice to TBA's servers
 
 
 def _finals_count(con: sqlite3.Connection, event_key: str) -> int:
@@ -380,7 +402,18 @@ def main() -> None:
             with open(json_path, "w") as f:
                 json.dump(matches, f, indent=2)
             print(f"    Saved {len(matches)} matches to {json_path}")
-            _insert_matches(matches, event_key, db_path)
+            if matches:
+                _insert_matches(matches, event_key, db_path)
+            else:
+                print(f"    No matches yet — fetching registered team list for {event_key}...")
+                team_keys = _tba_fetch_event_team_keys(event_key)
+                print(f"    {len(team_keys)} teams registered: {', '.join(sorted(team_keys))}")
+                with con:
+                    for tk in team_keys:
+                        con.execute(
+                            "INSERT OR IGNORE INTO event_teams (event_key, team_key) VALUES (?, ?)",
+                            (event_key, tk),
+                        )
         else:
             print(f"  {event_key}: {finals} finals match(es) already in DB — skipping fetch")
 

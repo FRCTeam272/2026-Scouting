@@ -10,6 +10,12 @@ cd "$SCRIPT_DIR"
 
 PYTHON="${PYTHON:-python3}"
 TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S')"
+LOG_FILE="${LOG_FILE:-update.log}"
+
+# Clear log file if it exceeds 500 lines
+if [[ -f "$LOG_FILE" ]] && (( "$(wc -l < "$LOG_FILE")" > 500 )); then
+    > "$LOG_FILE"
+fi
 DB_PATH="${DB_PATH:-matches.db}"
 COUNT_FILE="${COUNT_FILE:-matches-count}"
 
@@ -52,29 +58,30 @@ $PYTHON import_matches.py
 after_count="$(get_match_count)"
 log "Matches in DB after import: $after_count"
 
-if [[ "$before_count" == "$after_count" ]]; then
-    log "Match count unchanged — skipping dashboard generation and git commit."
-    log "=== TBA update finished ==="
-    exit 0
-fi
-
-echo "$after_count" > "$COUNT_FILE"
-log "Match count changed ($before_count -> $after_count)."
-delta_count="$((after_count - before_count))"
-delta_str="$(printf "%+d" "$delta_count")"
-
-# ── 2. Regenerate HTML dashboards ────────────────────────────────────────────
+# ── 2. Regenerate HTML dashboards (always, so upcoming pages stay current) ───
 log "Running create_view.py..."
 $PYTHON create_view.py
 
 # ── 3. Commit and push ───────────────────────────────────────────────────────
 log "Staging changes..."
-git add *.html "$COUNT_FILE"
+git add *.html update.log
+
+if [[ "$before_count" != "$after_count" ]]; then
+    echo "$after_count" > "$COUNT_FILE"
+    git add "$COUNT_FILE"
+fi
 
 if git diff --cached --quiet; then
     log "Nothing changed — skipping commit."
 else
-    git commit -m "Auto-update: matches $before_count->$after_count ($delta_str), dashboards [$TIMESTAMP]"
+    if [[ "$before_count" != "$after_count" ]]; then
+        delta_count="$((after_count - before_count))"
+        delta_str="$(printf "%+d" "$delta_count")"
+        msg="Auto-update: matches $before_count->$after_count ($delta_str), dashboards [$TIMESTAMP]"
+    else
+        msg="Auto-update: dashboards [$TIMESTAMP]"
+    fi
+    git commit -m "$msg"
     log "Pushing to origin..."
     git push origin main
     log "Push complete."
