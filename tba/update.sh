@@ -82,9 +82,13 @@ else
         msg="Auto-update: dashboards [$TIMESTAMP]"
     fi
     git commit -m "$msg"
-    log "Pushing to origin..."
-    git push origin main
-    log "Push complete."
+    if [[ "$before_count" != "$after_count" ]]; then
+        log "Pushing to origin (match updates detected)..."
+        git push origin main
+        log "Push complete."
+    else
+        log "No match updates — skipping push."
+    fi
 fi
 
 log "=== TBA update finished ==="
