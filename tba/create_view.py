@@ -522,6 +522,14 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     #menu-btn{display:none;background:none;border:none;color:var(--text);cursor:pointer;padding:4px;flex-shrink:0;line-height:0;}
     .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99;}
     .sidebar-overlay.open{display:block;}
+    /* Favourite star */
+    .fav-star{background:none;border:none;cursor:pointer;font-size:.9rem;line-height:1;padding:2px 4px;opacity:.3;flex-shrink:0;color:#f5c542;transition:opacity .15s;}
+    .fav-star:hover{opacity:.7;}
+    .fav-star.active{opacity:1;}
+    .team-item.is-fav{border-left-color:#f5c542;}
+    /* Pull-to-refresh */
+    #ptr-indicator{position:fixed;top:0;left:0;right:0;height:0;display:flex;align-items:flex-end;justify-content:center;pointer-events:none;z-index:200;overflow:hidden;background:var(--surface);transition:none;}
+    #ptr-indicator span{margin-bottom:6px;font-size:.75rem;color:var(--muted);white-space:nowrap;}
 
     @media(max-width:768px){
       body{height:100dvh;}
@@ -648,10 +656,21 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 
 <script>
 const DATA = __DATA__;
+const PAGE_ID = '__PAGE_ID__';
+const EVENT_NAMES_JS = __EVENT_NAMES_JS__;
 
 const activeCharts = {};
 let compareSet = new Set();
 let hiddenSet  = new Set(JSON.parse(localStorage.getItem('tba_hidden') || '[]'));
+
+// ── Favourites (one per page) ──────────────────────────────────────────────────
+const FAV_KEY = 'tba_fav_' + PAGE_ID;
+function getFav() { return localStorage.getItem(FAV_KEY); }
+function toggleFav(key) {
+  const cur = getFav();
+  if (cur === key) localStorage.removeItem(FAV_KEY); else localStorage.setItem(FAV_KEY, key);
+  rebuildSidebar();
+}
 Chart.defaults.color = '#7b82a0';
 Chart.defaults.borderColor = '#2e334d';
 Chart.defaults.font.family = "'Segoe UI',system-ui,sans-serif";
@@ -736,9 +755,14 @@ function rebuildSidebar() {
     teleop:      (a,b) => (b.teleop_avg  ?? -1) - (a.teleop_avg  ?? -1),
     combined:    (a,b) => ((b.auto_avg??0)+(b.teleop_avg??0)) - ((a.auto_avg??0)+(a.teleop_avg??0)),
   };
-  const visible = DATA.teams
+  const fav = getFav();
+  let visible = DATA.teams
     .filter(t => !hiddenSet.has(t.key) && (t.num.includes(q) || (t.nickname||'').toLowerCase().includes(q)))
     .sort(sorters[sortBy] || sorters.tower);
+  if (fav) {
+    const favIdx = visible.findIndex(t => t.key === fav);
+    if (favIdx > 0) visible = [visible[favIdx], ...visible.slice(0,favIdx), ...visible.slice(favIdx+1)];
+  }
   buildSidebar(visible);
   const btn = document.getElementById('show-hidden-btn');
   btn.style.display = hiddenSet.size > 0 ? 'block' : 'none';
@@ -1018,6 +1042,15 @@ function loadTeam(key) {
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           Statbotics
         </a>
+        ${t.events.length > 1 || (t.events.length === 1 && t.events[0].slice(0,8) !== PAGE_ID) ? t.events.map(ev => {
+          const ep = ev.slice(0,8);
+          const fname = ep + '.html';
+          const name = EVENT_NAMES_JS[ep] || ep;
+          const isCurrent = ep === PAGE_ID;
+          return isCurrent
+            ? `<span style="font-size:.78rem;color:var(--muted);">${name} (here)</span>`
+            : `<a class="ext-link" href="${fname}">${name}</a>`;
+        }).join('') : ''}
       </div>
     </div>
 
@@ -1326,11 +1359,13 @@ function showOverview() {
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 function buildSidebar(teams) {
+  const fav = getFav();
   document.getElementById('team-list').innerHTML = teams.map(t => {
     const badgeCls = t.tower_rate > 0 ? 'team-badge badge-tower' : 'team-badge';
     const checked  = compareSet.has(t.key) ? 'checked' : '';
     const disabled = !compareSet.has(t.key) && compareSet.size >= 6 ? 'disabled' : '';
-    return `<div class="team-item" data-key="${t.key}">
+    const isFav    = fav === t.key;
+    return `<div class="team-item${isFav ? ' is-fav' : ''}" data-key="${t.key}">
       <input type="checkbox" class="compare-check" data-key="${t.key}" ${checked} ${disabled}
              onclick="event.stopPropagation(); toggleCompare('${t.key}', this.checked)">
       <div style="flex:1;min-width:0;cursor:pointer;" onclick="loadTeam('${t.key}')">
@@ -1338,6 +1373,7 @@ function buildSidebar(teams) {
         <div class="team-sub">${t.played}m · tower ${pct(t.tower_rate)}</div>
       </div>
       <span class="${badgeCls}">${t.tower_matches > 0 ? '🗼 '+t.tower_matches : t.played+'m'}</span>
+      <button class="fav-star${isFav ? ' active' : ''}" title="${isFav ? 'Unfavourite' : 'Favourite'}" onclick="event.stopPropagation();toggleFav('${t.key}')">★</button>
       <button class="hide-btn" title="Hide" onclick="hideTeam(event,'${t.key}')">×</button>
     </div>`;
   }).join('');
@@ -1388,6 +1424,32 @@ function closeSidebar() {
   document.querySelector('.sidebar-overlay')?.classList.remove('open');
 }
 
+// ── Pull-to-refresh ───────────────────────────────────────────────────────────
+(function() {
+  const mainEl = document.querySelector('main');
+  const ptr = document.getElementById('ptr-indicator');
+  let startY = 0, active = false;
+  const THRESHOLD = 72;
+  mainEl.addEventListener('touchstart', e => {
+    if (mainEl.scrollTop === 0) { startY = e.touches[0].clientY; active = true; }
+  }, {passive: true});
+  mainEl.addEventListener('touchmove', e => {
+    if (!active) return;
+    const dy = Math.max(0, e.touches[0].clientY - startY);
+    const h = Math.min(dy * 0.4, THRESHOLD);
+    ptr.style.height = h + 'px';
+    ptr.querySelector('span').textContent = h >= THRESHOLD * 0.9 ? '↑ Release to refresh' : '↓ Pull to refresh';
+  }, {passive: true});
+  mainEl.addEventListener('touchend', e => {
+    if (!active) return;
+    active = false;
+    const dy = e.changedTouches[0].clientY - startY;
+    ptr.style.height = '0';
+    if (dy > THRESHOLD) location.reload();
+  }, {passive: true});
+  mainEl.addEventListener('touchcancel', () => { active = false; ptr.style.height = '0'; }, {passive: true});
+})();
+
 // Boot
 document.getElementById('team-count').textContent = `${DATA.teams.length} teams`;
 const _schedUpcoming = (DATA.schedule || []).filter(m => !m.winner).length;
@@ -1400,23 +1462,28 @@ rebuildSidebar();
 restoreNav() || showOverview();
 </script>
 <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+<div id="ptr-indicator"><span></span></div>
 </body>
 </html>
 """
 
 
-def build_html(data: dict, title: str, timestamp: str) -> str:
+def build_html(data: dict, title: str, timestamp: str, page_id: str = "region") -> str:
     embedded = json.dumps(data, separators=(",", ":"))
+    event_names_js = json.dumps(EVENT_NAMES, separators=(",", ":"))
     return (HTML_TEMPLATE
             .replace("__DATA__", embedded)
             .replace("__TITLE__", title)
-            .replace("__TIMESTAMP__", timestamp))
+            .replace("__TIMESTAMP__", timestamp)
+            .replace("__PAGE_ID__", page_id)
+            .replace("__EVENT_NAMES_JS__", event_names_js))
 
 
 def write_view(event_prefix: str | None, out_path: str, title: str, timestamp: str) -> None:
     data = load_data(DB_PATH, event_prefix)
     print(f"  {data['overview']['total_teams']} teams, {data['overview']['total_matches']} matches  →  {out_path}")
-    html = build_html(data, title, timestamp)
+    page_id = event_prefix if event_prefix else "region"
+    html = build_html(data, title, timestamp, page_id)
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(html)
 
