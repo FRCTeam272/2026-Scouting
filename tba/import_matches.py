@@ -198,10 +198,99 @@ def _insert_matches(matches: list, source_label: str, db_path: str) -> None:
         for match in matches:
             key = match["key"]
 
-            # Check for duplicate
-            exists = con.execute("SELECT 1 FROM matches WHERE key = ?", (key,)).fetchone()
-            if exists:
-                skipped += 1
+            # Check for existing match
+            existing = con.execute(
+                "SELECT actual_time FROM matches WHERE key = ?", (key,)
+            ).fetchone()
+            if existing:
+                if existing[0] is not None or not match.get("actual_time"):
+                    # Already has results, or new data has none either — nothing to update
+                    skipped += 1
+                    continue
+                # Existing match has no results but new data does — update it
+                con.execute(
+                    """UPDATE matches
+                       SET actual_time=?, post_result_time=?, winning_alliance=?
+                       WHERE key=?""",
+                    (match.get("actual_time"), match.get("post_result_time"),
+                     match.get("winning_alliance"), key),
+                )
+                for color, alliance in match["alliances"].items():
+                    con.execute(
+                        "UPDATE match_alliances SET score=? WHERE match_key=? AND color=?",
+                        (alliance["score"], key, color),
+                    )
+                breakdown = match.get("score_breakdown") or {}
+                for color, sb in breakdown.items():
+                    hub = sb.get("hubScore", {})
+                    con.execute(
+                        """INSERT OR IGNORE INTO hub_scores
+                           (match_key, color,
+                            auto_count, auto_points,
+                            endgame_count, endgame_points,
+                            shift1_count, shift1_points,
+                            shift2_count, shift2_points,
+                            shift3_count, shift3_points,
+                            shift4_count, shift4_points,
+                            teleop_count, teleop_points,
+                            transition_count, transition_points,
+                            total_count, total_points, uncounted)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (
+                            key, color,
+                            hub.get("autoCount"), hub.get("autoPoints"),
+                            hub.get("endgameCount"), hub.get("endgamePoints"),
+                            hub.get("shift1Count"), hub.get("shift1Points"),
+                            hub.get("shift2Count"), hub.get("shift2Points"),
+                            hub.get("shift3Count"), hub.get("shift3Points"),
+                            hub.get("shift4Count"), hub.get("shift4Points"),
+                            hub.get("teleopCount"), hub.get("teleopPoints"),
+                            hub.get("transitionCount"), hub.get("transitionPoints"),
+                            hub.get("totalCount"), hub.get("totalPoints"),
+                            hub.get("uncounted"),
+                        ),
+                    )
+
+                    def _none(val):
+                        return None if val == "None" else val
+
+                    con.execute(
+                        """INSERT OR IGNORE INTO score_breakdowns
+                           (match_key, color,
+                            auto_tower_robot1, auto_tower_robot2, auto_tower_robot3, auto_tower_points,
+                            end_game_tower_robot1, end_game_tower_robot2, end_game_tower_robot3, end_game_tower_points,
+                            foul_points, major_foul_count, minor_foul_count, g206_penalty, penalties,
+                            energized_achieved, supercharged_achieved, traversal_achieved,
+                            adjust_points, rp,
+                            total_auto_points, total_teleop_points, total_tower_points, total_points)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (
+                            key, color,
+                            _none(sb.get("autoTowerRobot1")),
+                            _none(sb.get("autoTowerRobot2")),
+                            _none(sb.get("autoTowerRobot3")),
+                            sb.get("autoTowerPoints"),
+                            _none(sb.get("endGameTowerRobot1")),
+                            _none(sb.get("endGameTowerRobot2")),
+                            _none(sb.get("endGameTowerRobot3")),
+                            sb.get("endGameTowerPoints"),
+                            sb.get("foulPoints"),
+                            sb.get("majorFoulCount"),
+                            sb.get("minorFoulCount"),
+                            int(bool(sb.get("g206Penalty"))),
+                            _none(sb.get("penalties")),
+                            int(bool(sb.get("energizedAchieved"))),
+                            int(bool(sb.get("superchargedAchieved"))),
+                            int(bool(sb.get("traversalAchieved"))),
+                            sb.get("adjustPoints"),
+                            sb.get("rp"),
+                            sb.get("totalAutoPoints"),
+                            sb.get("totalTeleopPoints"),
+                            sb.get("totalTowerPoints"),
+                            sb.get("totalPoints"),
+                        ),
+                    )
+                inserted += 1
                 continue
 
             # matches
@@ -380,6 +469,15 @@ def _finals_count(con: sqlite3.Connection, event_key: str) -> int:
     return row[0] if row else 0
 
 
+def _unresolved_count(con: sqlite3.Connection, event_key: str) -> int:
+    """Return the number of matches stored for an event that have no result yet."""
+    row = con.execute(
+        "SELECT COUNT(*) FROM matches WHERE event_key = ? AND actual_time IS NULL",
+        (event_key,),
+    ).fetchone()
+    return row[0] if row else 0
+
+
 def main() -> None:
     db_path = "matches.db"
 
@@ -394,8 +492,10 @@ def main() -> None:
 
     for event_key in event_keys:
         finals = _finals_count(con, event_key)
-        if finals < 2:
-            print(f"  {event_key}: {finals} finals match(es) in DB — fetching from TBA...")
+        unresolved = _unresolved_count(con, event_key)
+        if finals < 2 or unresolved > 0:
+            reason = f"{finals} finals match(es)" if finals < 2 else f"{unresolved} unresolved match(es)"
+            print(f"  {event_key}: {reason} in DB — fetching from TBA...")
             matches = _tba_fetch_matches(event_key)
             # Save/overwrite local JSON
             json_path = f"{event_key}_matches.json"
@@ -415,7 +515,7 @@ def main() -> None:
                             (event_key, tk),
                         )
         else:
-            print(f"  {event_key}: {finals} finals match(es) already in DB — skipping fetch")
+            print(f"  {event_key}: {finals} finals match(es) already in DB, no unresolved — skipping fetch")
 
     print("\nSyncing team names...")
     _sync_team_names(con)
