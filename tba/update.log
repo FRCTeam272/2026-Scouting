@@ -310,3 +310,7 @@ Loading data from matches.db...
   index.html  →  12 pages listed
 Done. Generated 13 file(s).
 [2026-03-14 19:45:01] Staging changes...
+[main 35f6b98] Auto-update: dashboards [2026-03-14 19:45:01]
+ 14 files changed, 72 insertions(+), 13 deletions(-)
+[2026-03-14 19:45:01] No match data updates — skipping push.
+[2026-03-14 19:45:01] === TBA update finished ===

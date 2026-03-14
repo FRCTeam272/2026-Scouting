@@ -396,7 +396,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       --sidebar-w:260px;
     }
     *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;overflow:hidden;overscroll-behavior-y:none;}
 
     header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;}
     header h1{font-size:1.1rem;font-weight:700;color:var(--accent);letter-spacing:.04em;white-space:nowrap;}
@@ -652,7 +652,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     <div id="schedule-view"></div>
   </main>
 </div>
-<footer>FRC 272 · TBA Match Data 2026</footer>
+<footer>FRC 272 · TBA Match Data 2026 · Generated __TIMESTAMP__</footer>
 
 <script>
 const DATA = __DATA__;
@@ -1428,18 +1428,20 @@ function closeSidebar() {
 (function() {
   const mainEl = document.querySelector('main');
   const ptr = document.getElementById('ptr-indicator');
+  const ptrSpan = ptr.querySelector('span');
   let startY = 0, active = false;
   const THRESHOLD = 72;
   mainEl.addEventListener('touchstart', e => {
-    if (mainEl.scrollTop === 0) { startY = e.touches[0].clientY; active = true; }
+    if (mainEl.scrollTop <= 1) { startY = e.touches[0].clientY; active = true; }
   }, {passive: true});
   mainEl.addEventListener('touchmove', e => {
     if (!active) return;
     const dy = Math.max(0, e.touches[0].clientY - startY);
+    if (dy > 0) e.preventDefault(); // block Chrome's native PTR
     const h = Math.min(dy * 0.4, THRESHOLD);
     ptr.style.height = h + 'px';
-    ptr.querySelector('span').textContent = h >= THRESHOLD * 0.9 ? '↑ Release to refresh' : '↓ Pull to refresh';
-  }, {passive: true});
+    ptrSpan.textContent = h >= THRESHOLD * 0.9 ? '↑ Release to refresh' : '↓ Pull to refresh';
+  }, {passive: false}); // must be non-passive to call preventDefault
   mainEl.addEventListener('touchend', e => {
     if (!active) return;
     active = false;
