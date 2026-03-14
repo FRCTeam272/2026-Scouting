@@ -396,7 +396,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       --sidebar-w:260px;
     }
     *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;overflow:hidden;overscroll-behavior-y:none;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 
     header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;}
     header h1{font-size:1.1rem;font-weight:700;color:var(--accent);letter-spacing:.04em;white-space:nowrap;}
@@ -527,9 +527,6 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     .fav-star:hover{opacity:.7;}
     .fav-star.active{opacity:1;}
     .team-item.is-fav{border-left-color:#f5c542;}
-    /* Pull-to-refresh */
-    #ptr-indicator{position:fixed;top:0;left:0;right:0;height:0;display:flex;align-items:flex-end;justify-content:center;pointer-events:none;z-index:200;overflow:hidden;background:var(--surface);transition:none;}
-    #ptr-indicator span{margin-bottom:6px;font-size:.75rem;color:var(--muted);white-space:nowrap;}
 
     @media(max-width:768px){
       body{height:100dvh;}
@@ -652,7 +649,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     <div id="schedule-view"></div>
   </main>
 </div>
-<footer>FRC 272 · TBA Match Data 2026 · Generated __TIMESTAMP__</footer>
+<footer>FRC 272 · TBA Match Data 2026 · Generated __TIMESTAMP__ · <button onclick="location.reload()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.75rem;font-family:inherit;padding:0;">↻ Reload</button></footer>
 
 <script>
 const DATA = __DATA__;
@@ -1424,34 +1421,6 @@ function closeSidebar() {
   document.querySelector('.sidebar-overlay')?.classList.remove('open');
 }
 
-// ── Pull-to-refresh ───────────────────────────────────────────────────────────
-(function() {
-  const mainEl = document.querySelector('main');
-  const ptr = document.getElementById('ptr-indicator');
-  const ptrSpan = ptr.querySelector('span');
-  let startY = 0, active = false;
-  const THRESHOLD = 72;
-  mainEl.addEventListener('touchstart', e => {
-    if (mainEl.scrollTop <= 1) { startY = e.touches[0].clientY; active = true; }
-  }, {passive: true});
-  mainEl.addEventListener('touchmove', e => {
-    if (!active) return;
-    const dy = Math.max(0, e.touches[0].clientY - startY);
-    if (dy > 0) e.preventDefault(); // block Chrome's native PTR
-    const h = Math.min(dy * 0.4, THRESHOLD);
-    ptr.style.height = h + 'px';
-    ptrSpan.textContent = h >= THRESHOLD * 0.9 ? '↑ Release to refresh' : '↓ Pull to refresh';
-  }, {passive: false}); // must be non-passive to call preventDefault
-  mainEl.addEventListener('touchend', e => {
-    if (!active) return;
-    active = false;
-    const dy = e.changedTouches[0].clientY - startY;
-    ptr.style.height = '0';
-    if (dy > THRESHOLD) location.reload();
-  }, {passive: true});
-  mainEl.addEventListener('touchcancel', () => { active = false; ptr.style.height = '0'; }, {passive: true});
-})();
-
 // Boot
 document.getElementById('team-count').textContent = `${DATA.teams.length} teams`;
 const _schedUpcoming = (DATA.schedule || []).filter(m => !m.winner).length;
@@ -1464,7 +1433,6 @@ rebuildSidebar();
 restoreNav() || showOverview();
 </script>
 <div class="sidebar-overlay" onclick="closeSidebar()"></div>
-<div id="ptr-indicator"><span></span></div>
 </body>
 </html>
 """
