@@ -102,6 +102,17 @@ def load_data(db_path: str, event_prefix: str | None = None) -> dict:
     except Exception:
         pass
 
+    # all events per team across the whole DB (unfiltered — needed for cross-event links)
+    # includes both played events (alliance_teams) and registered upcoming events (event_teams)
+    team_all_events: dict[str, set] = {}
+    for row in con.execute("""
+        SELECT team_key, substr(match_key, 1, 8) AS ep FROM alliance_teams
+        UNION
+        SELECT team_key, event_key AS ep FROM event_teams
+        GROUP BY team_key, ep
+    """):
+        team_all_events.setdefault(row["team_key"], set()).add(row["ep"])
+
     # videos keyed by match_key (first youtube video wins)
     match_videos = {}
     for row in con.execute(f"SELECT match_key, type, video_key FROM match_videos {mk_filter}", args):
@@ -204,7 +215,7 @@ def load_data(db_path: str, event_prefix: str | None = None) -> dict:
             "contrib_avg":  contrib_avg,
             "auto_avg":     auto_avg,
             "teleop_avg":   teleop_avg,
-            "events":       sorted(e for e in events_seen if e),
+            "events":       sorted(team_all_events.get(tk, events_seen)),
             "match_history": match_history,
         })
 
@@ -1039,15 +1050,15 @@ function loadTeam(key) {
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           Statbotics
         </a>
-        ${t.events.length > 1 || (t.events.length === 1 && t.events[0].slice(0,8) !== PAGE_ID) ? t.events.map(ev => {
-          const ep = ev.slice(0,8);
+        ${PAGE_ID !== 'region' ? `<a class="ext-link" href="Region Wide.html">Region Wide</a>` : ''}
+        ${t.events.map(ep => {
           const fname = ep + '.html';
-          const name = EVENT_NAMES_JS[ep] || ep;
-          const isCurrent = ep === PAGE_ID;
+          const name = EVENT_NAMES_JS[ep] || EVENT_NAMES_JS[ep.slice(0,8)] || ep;
+          const isCurrent = ep === PAGE_ID || ep.slice(0,8) === PAGE_ID;
           return isCurrent
             ? `<span style="font-size:.78rem;color:var(--muted);">${name} (here)</span>`
             : `<a class="ext-link" href="${fname}">${name}</a>`;
-        }).join('') : ''}
+        }).join('')}
       </div>
     </div>
 
