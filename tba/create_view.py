@@ -104,14 +104,24 @@ def load_data(db_path: str, event_prefix: str | None = None) -> dict:
 
     # all events per team across the whole DB (unfiltered — needed for cross-event links)
     # includes both played events (alliance_teams) and registered upcoming events (event_teams)
+    # For events with matches we use the 8-char prefix (e.g. "2026njta") so links go to the
+    # match-data page; for events with no matches yet we use the full event_key (e.g. "2026njtab").
+    played_eps: set = {
+        r[0] for r in con.execute(
+            "SELECT DISTINCT substr(match_key, 1, 8) FROM alliance_teams"
+        )
+    }
     team_all_events: dict[str, set] = {}
-    for row in con.execute("""
-        SELECT team_key, substr(match_key, 1, 8) AS ep FROM alliance_teams
-        UNION
-        SELECT team_key, event_key AS ep FROM event_teams
-        GROUP BY team_key, ep
-    """):
+    for row in con.execute(
+        "SELECT team_key, substr(match_key, 1, 8) AS ep FROM alliance_teams GROUP BY team_key, ep"
+    ):
         team_all_events.setdefault(row["team_key"], set()).add(row["ep"])
+    for row in con.execute(
+        "SELECT team_key, event_key AS ep FROM event_teams GROUP BY team_key, event_key"
+    ):
+        # skip events that already have match data — covered by alliance_teams above
+        if row["ep"][:8] not in played_eps:
+            team_all_events.setdefault(row["team_key"], set()).add(row["ep"])
 
     # videos keyed by match_key (first youtube video wins)
     match_videos = {}
