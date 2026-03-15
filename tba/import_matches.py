@@ -46,6 +46,15 @@ def _tba_fetch_event_team_keys(event_key: str) -> list:
     return resp.json()  # list of "frc####" strings
 
 
+def _tba_fetch_event_awards(event_key: str) -> list:
+    import requests
+    url = f"{TBA_BASE}/event/{event_key}/awards"
+    resp = requests.get(url, headers=_tba_headers())
+    sleep(0.5)
+    resp.raise_for_status()
+    return resp.json()
+
+
 def _tba_fetch_district_events(district_key: str) -> list:
     import requests
     url = f"{TBA_BASE}/district/{district_key}/events/keys"
@@ -181,6 +190,16 @@ CREATE TABLE IF NOT EXISTS event_teams (
     event_key TEXT NOT NULL,
     team_key  TEXT NOT NULL,
     PRIMARY KEY (event_key, team_key)
+);
+
+CREATE TABLE IF NOT EXISTS awards (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_key  TEXT NOT NULL,
+    award_type INTEGER NOT NULL,
+    name       TEXT NOT NULL,
+    team_key   TEXT,
+    awardee    TEXT,
+    UNIQUE (event_key, award_type, team_key)
 );
 """
 
@@ -516,6 +535,35 @@ def main() -> None:
                         )
         else:
             print(f"  {event_key}: {finals} finals match(es) already in DB, no unresolved — skipping fetch")
+
+        # Fetch awards for any event that has finals, if not already stored
+        if finals >= 2:
+            existing_awards = con.execute(
+                "SELECT COUNT(*) FROM awards WHERE event_key = ?", (event_key,)
+            ).fetchone()[0]
+            if existing_awards == 0:
+                try:
+                    raw_awards = _tba_fetch_event_awards(event_key)
+                    ei_impact = [
+                        a for a in raw_awards
+                        if a.get("award_type") in (0, 9)
+                        or "impact" in a.get("name", "").lower()
+                        or "engineering inspiration" in a.get("name", "").lower()
+                    ]
+                    for award in ei_impact:
+                        for recipient in award.get("recipient_list", []):
+                            with con:
+                                con.execute(
+                                    """INSERT OR IGNORE INTO awards
+                                       (event_key, award_type, name, team_key, awardee)
+                                       VALUES (?, ?, ?, ?, ?)""",
+                                    (event_key, award["award_type"], award["name"],
+                                     recipient.get("team_key"), recipient.get("awardee")),
+                                )
+                    if ei_impact:
+                        print(f"    Stored {len(ei_impact)} EI/Impact award(s) for {event_key}")
+                except Exception as e:
+                    print(f"    Warning: could not fetch awards for {event_key}: {e}")
 
     print("\nSyncing team names...")
     _sync_team_names(con)

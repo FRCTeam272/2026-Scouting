@@ -1600,6 +1600,7 @@ INDEX_TEMPLATE = """\
   <div class="grid" id="grid">
 {cards}
   </div>
+{awards_section}
 <script>
 const FAVS_KEY = 'tba_index_favs';
 function getFavs() {{
@@ -1637,7 +1638,25 @@ applyFavs();
 """
 
 
-def build_index(pages: list[tuple[str, str, str]], timestamp: str) -> str:
+def load_awards(db_path: str) -> list[dict]:
+    """Return EI and Impact award winners grouped by award type, sorted by event."""
+    con = sqlite3.connect(db_path)
+    con.row_factory = sqlite3.Row
+    try:
+        rows = con.execute("""
+            SELECT a.event_key, a.award_type, a.name, a.team_key, a.awardee,
+                   t.nickname
+            FROM awards a
+            LEFT JOIN teams t ON t.team_key = a.team_key
+            ORDER BY a.award_type, a.event_key
+        """).fetchall()
+    except Exception:
+        rows = []
+    con.close()
+    return [dict(r) for r in rows]
+
+
+def build_index(pages: list[tuple[str, str, str]], timestamp: str, awards: list[dict]) -> str:
     """pages: list of (filename, title, subtitle)"""
     cards = "\n".join(
         f'    <div class="card-wrap" data-fname="{fname}">'
@@ -1648,7 +1667,63 @@ def build_index(pages: list[tuple[str, str, str]], timestamp: str) -> str:
         f'</div>'
         for fname, title, sub in pages
     )
-    return INDEX_TEMPLATE.format(timestamp=timestamp, cards=cards)
+
+    # Build award rows grouped by type (Impact=0 first, EI=3 second)
+    def award_rows(award_type: int) -> str:
+        rows = [a for a in awards if a["award_type"] == award_type]
+        if not rows:
+            return '<tr><td colspan="3" style="padding:8px 12px;color:var(--muted);font-style:italic;font-size:.8rem;">None recorded yet</td></tr>'
+        out = []
+        for a in rows:
+            event_display = EVENT_NAMES.get(a["event_key"][:8], a["event_key"])
+            team_num = a["team_key"].replace("frc", "") if a["team_key"] else "—"
+            nickname = a["nickname"] or ""
+            out.append(
+                f'<tr style="border-bottom:1px solid var(--border);">'
+                f'<td style="padding:8px 12px;font-size:.85rem;font-weight:700;color:var(--accent);">#{team_num}</td>'
+                f'<td style="padding:8px 12px;font-size:.85rem;color:var(--text);">{nickname}</td>'
+                f'<td style="padding:8px 12px;font-size:.82rem;color:var(--muted);">{event_display}</td>'
+                f'</tr>'
+            )
+        return "\n".join(out)
+
+    def award_label(award_type: int) -> str:
+        """Use the actual award name from DB, falling back to a generic label."""
+        for a in awards:
+            if a["award_type"] == award_type:
+                return a["name"]
+        return "Impact Award" if award_type == 0 else "District Engineering Inspiration Award sponsored by SpaceX"
+
+    awards_section = f"""
+  <div style="width:100%;max-width:800px;margin-top:36px;">
+    <h2 style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:16px;">District Awards</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+        <div style="padding:10px 14px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:.8rem;font-weight:700;color:var(--gold);">🏆 {award_label(0)}</div>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr>
+            <th style="text-align:left;padding:6px 12px;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);">Team</th>
+            <th style="text-align:left;padding:6px 12px;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);">Name</th>
+            <th style="text-align:left;padding:6px 12px;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);">Event</th>
+          </tr></thead>
+          <tbody>{award_rows(0)}</tbody>
+        </table>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+        <div style="padding:10px 14px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:.8rem;font-weight:700;color:var(--gold);">⭐ {award_label(9)}</div>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr>
+            <th style="text-align:left;padding:6px 12px;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);">Team</th>
+            <th style="text-align:left;padding:6px 12px;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);">Name</th>
+            <th style="text-align:left;padding:6px 12px;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);">Event</th>
+          </tr></thead>
+          <tbody>{award_rows(9)}</tbody>
+        </table>
+      </div>
+    </div>
+  </div>""" if awards is not None else ""
+
+    return INDEX_TEMPLATE.format(timestamp=timestamp, cards=cards, awards_section=awards_section)
 
 
 def main():
@@ -1696,7 +1771,8 @@ def main():
         print(f"  {n} teams (upcoming)  →  {fname}")
         pages.append((fname, display, f"{n} teams · upcoming"))
 
-    index_html = build_index(pages, timestamp)
+    awards = load_awards(DB_PATH)
+    index_html = build_index(pages, timestamp, awards)
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(index_html)
     print(f"  index.html  →  {len(pages)} pages listed")
