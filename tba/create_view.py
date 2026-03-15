@@ -1050,15 +1050,6 @@ function loadTeam(key) {
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           Statbotics
         </a>
-        ${PAGE_ID !== 'region' ? `<a class="ext-link" href="Region Wide.html">Region Wide</a>` : ''}
-        ${t.events.map(ep => {
-          const fname = ep + '.html';
-          const name = EVENT_NAMES_JS[ep] || EVENT_NAMES_JS[ep.slice(0,8)] || ep;
-          const isCurrent = ep === PAGE_ID || ep.slice(0,8) === PAGE_ID;
-          return isCurrent
-            ? `<span style="font-size:.78rem;color:var(--muted);">${name} (here)</span>`
-            : `<a class="ext-link" href="${fname}">${name}</a>`;
-        }).join('')}
       </div>
     </div>
 
@@ -1102,6 +1093,29 @@ function loadTeam(key) {
       <div class="chart-card"><h3>Hub Points Breakdown</h3>
         <div class="chart-wrap medium"><canvas id="tc-hub"></canvas></div></div>
     </div>` : ''}
+
+    <p class="section-title">Events</p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+      <thead><tr>
+        <th style="text-align:left;padding:7px 12px;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);">Event</th>
+        <th style="text-align:left;padding:7px 12px;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);">Status</th>
+        <th style="text-align:left;padding:7px 12px;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);">Link</th>
+      </tr></thead>
+      <tbody>
+        ${(PAGE_ID !== 'region' ? [{ep:'region', name:'Region Wide', fname:'Region Wide.html', current:false}] : [])
+          .concat(t.events.map(ep => ({
+            ep,
+            name: EVENT_NAMES_JS[ep] || EVENT_NAMES_JS[ep.slice(0,8)] || ep,
+            fname: ep + '.html',
+            current: ep === PAGE_ID || ep.slice(0,8) === PAGE_ID,
+          })))
+          .map(({name, fname, current}) => `<tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:8px 12px;font-size:.85rem;font-weight:600;color:var(--text);">${name}</td>
+            <td style="padding:8px 12px;font-size:.78rem;color:var(--muted);">${current ? '<span style="color:var(--accent);">● Current</span>' : 'Other'}</td>
+            <td style="padding:8px 12px;font-size:.78rem;">${current ? '—' : `<a class="ext-link" href="${fname}">Open →</a>`}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>
 
     <p class="section-title">Match History</p>
     <div class="matches-grid">
