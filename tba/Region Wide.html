@@ -583,8 +583,8 @@ function showSchedule() {
              style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 11px;color:var(--text);font-size:.85rem;width:220px;outline:none;"
              oninput="filterSchedule(this.value)"
              onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
-      ${upcoming > 0 ? `<button id="sched-hide-played" onclick="toggleHidePlayed()"
-        style="font-size:.78rem;font-weight:600;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 11px;cursor:pointer;white-space:nowrap;">Hide played</button>` : ''}
+      <button id="sched-hide-played" onclick="toggleHidePlayed()"
+        style="font-size:.78rem;font-weight:600;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 11px;cursor:pointer;white-space:nowrap;">Hide played</button>
       <span style="font-size:.8rem;color:var(--muted);"><span id="sched-shown">${sched.length}</span> shown</span>
     </div>
     <div class="matches-grid" id="sched-matches">

@@ -544,13 +544,7 @@ def main() -> None:
             if existing_awards == 0:
                 try:
                     raw_awards = _tba_fetch_event_awards(event_key)
-                    ei_impact = [
-                        a for a in raw_awards
-                        if a.get("award_type") in (0, 9)
-                        or "impact" in a.get("name", "").lower()
-                        or "engineering inspiration" in a.get("name", "").lower()
-                    ]
-                    for award in ei_impact:
+                    for award in raw_awards:
                         for recipient in award.get("recipient_list", []):
                             with con:
                                 con.execute(
@@ -560,8 +554,8 @@ def main() -> None:
                                     (event_key, award["award_type"], award["name"],
                                      recipient.get("team_key"), recipient.get("awardee")),
                                 )
-                    if ei_impact:
-                        print(f"    Stored {len(ei_impact)} EI/Impact award(s) for {event_key}")
+                    if raw_awards:
+                        print(f"    Stored {len(raw_awards)} award(s) for {event_key}")
                 except Exception as e:
                     print(f"    Warning: could not fetch awards for {event_key}: {e}")
 

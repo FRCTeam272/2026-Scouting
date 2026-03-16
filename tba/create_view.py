@@ -91,7 +91,7 @@ def load_data(db_path: str, event_prefix: str | None = None) -> dict:
 
     # matches metadata
     match_meta = {}
-    for row in con.execute(f"SELECT key, event_key, comp_level, set_number, match_number, winning_alliance FROM matches {key_filter}", args):
+    for row in con.execute(f"SELECT key, event_key, comp_level, set_number, match_number, winning_alliance, COALESCE(actual_time, predicted_time, time) AS sched_time FROM matches {key_filter}", args):
         match_meta[row["key"]] = dict(row)
 
     # team names keyed by team_key (no filtering — names are global)
@@ -99,6 +99,19 @@ def load_data(db_path: str, event_prefix: str | None = None) -> dict:
     try:
         for row in con.execute("SELECT team_key, nickname FROM teams"):
             team_names[row["team_key"]] = row["nickname"]
+    except Exception:
+        pass
+
+    # all awards per team (unfiltered — global)
+    team_awards: dict[str, list] = {}
+    try:
+        for row in con.execute(
+            "SELECT team_key, event_key, name FROM awards WHERE team_key IS NOT NULL ORDER BY event_key"
+        ):
+            team_awards.setdefault(row["team_key"], []).append({
+                "event_key": row["event_key"],
+                "name":      row["name"],
+            })
     except Exception:
         pass
 
@@ -184,6 +197,7 @@ def load_data(db_path: str, event_prefix: str | None = None) -> dict:
 
             match_history.append({
                 "match_key":    mk,
+                "sched_time":   meta.get("sched_time"),
                 "event":        meta.get("event_key", ""),
                 "comp_level":   meta.get("comp_level", ""),
                 "match_number": meta.get("match_number"),
@@ -204,6 +218,8 @@ def load_data(db_path: str, event_prefix: str | None = None) -> dict:
                 "rp":           bd.get("rp"),
                 "video_url":    match_videos.get(mk),
             })
+
+        match_history.sort(key=lambda m: (m["sched_time"] is None, m["sched_time"] or 0))
 
         scored = [m["score"] for m in match_history if m["score"] is not None]
         contrib_avg = round(sum(scored) / (len(scored) * 3), 2) if scored else None
@@ -226,6 +242,7 @@ def load_data(db_path: str, event_prefix: str | None = None) -> dict:
             "auto_avg":     auto_avg,
             "teleop_avg":   teleop_avg,
             "events":       sorted(team_all_events.get(tk, events_seen)),
+            "awards":       team_awards.get(tk, []),
             "match_history": match_history,
         })
 
@@ -610,6 +627,10 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
     </svg>
   </button>
+  <a href="index.html" title="Back to index" style="display:flex;align-items:center;background:none;border:none;color:var(--muted);text-decoration:none;font-size:.8rem;white-space:nowrap;flex-shrink:0;gap:4px;padding:4px 6px;border-radius:6px;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    Index
+  </a>
   <h1>__TITLE__</h1>
   <span id="team-count"></span>
   <span id="ts-label" style="color:var(--muted);font-size:.75rem;white-space:nowrap;">Generated __TIMESTAMP__</span>
@@ -983,8 +1004,8 @@ function showSchedule() {
              style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 11px;color:var(--text);font-size:.85rem;width:220px;outline:none;"
              oninput="filterSchedule(this.value)"
              onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
-      ${upcoming > 0 ? `<button id="sched-hide-played" onclick="toggleHidePlayed()"
-        style="font-size:.78rem;font-weight:600;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 11px;cursor:pointer;white-space:nowrap;">Hide played</button>` : ''}
+      <button id="sched-hide-played" onclick="toggleHidePlayed()"
+        style="font-size:.78rem;font-weight:600;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 11px;cursor:pointer;white-space:nowrap;">Hide played</button>
       <span style="font-size:.8rem;color:var(--muted);"><span id="sched-shown">${sched.length}</span> shown</span>
     </div>
     <div class="matches-grid" id="sched-matches">
@@ -1014,8 +1035,8 @@ function levelNum(val) {
   return m ? parseInt(m[0]) : 0;
 }
 function eventShort(event) {
-  // e.g. "2026njwas" -> "njwas"
-  return event ? event.replace(/^\d{4}/, '') : '';
+  if (!event) return '';
+  return EVENT_NAMES_JS[event] || EVENT_NAMES_JS[event.slice(0,8)] || event.replace(/^\d{4}/, '');
 }
 function matchLabel(m) {
   if (m.comp_level === 'qm') return `Qual ${m.match_number}`;
@@ -1102,6 +1123,21 @@ function loadTeam(key) {
     <div class="charts-grid single">
       <div class="chart-card"><h3>Hub Points Breakdown</h3>
         <div class="chart-wrap medium"><canvas id="tc-hub"></canvas></div></div>
+    </div>` : ''}
+
+    ${t.awards && t.awards.length > 0 ? `
+    <p class="section-title">Awards</p>
+    <div class="matches-grid" style="margin-bottom:20px;">
+      ${t.awards.map(a => {
+        const evName = EVENT_NAMES_JS[a.event_key] || EVENT_NAMES_JS[a.event_key.slice(0,8)] || a.event_key;
+        return `<div class="match-card">
+          <div class="match-card-header" style="gap:10px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f5c542" stroke-width="2" style="flex-shrink:0;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <span style="font-weight:600;font-size:.88rem;color:var(--text);">${a.name}</span>
+            <span class="event-tag" style="margin-left:auto;">${evName}</span>
+          </div>
+        </div>`;
+      }).join('')}
     </div>` : ''}
 
     <p class="section-title">Events</p>
