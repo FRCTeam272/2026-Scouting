@@ -443,6 +443,13 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     #search:focus{border-color:var(--accent);}
     #sort-by{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:.8rem;outline:none;cursor:pointer;}
     #sort-by:focus{border-color:var(--accent);}
+    #filter-event{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:.8rem;outline:none;cursor:pointer;}
+    #filter-event:focus{border-color:var(--accent);}
+    /* Event filter & climb toggle */
+    #toggle-climb{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--muted);font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;}
+    #toggle-climb:hover{border-color:var(--accent);color:var(--text);}
+    #toggle-climb.active{border-color:var(--teal);color:var(--teal);background:rgba(79,197,207,.1);}
+    body.hide-climb .climb-stat{display:none!important;}
 
     .layout{display:flex;flex:1;overflow:hidden;}
     aside{width:var(--sidebar-w);flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
@@ -635,6 +642,8 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   <span id="team-count"></span>
   <span id="ts-label" style="color:var(--muted);font-size:.75rem;white-space:nowrap;">Generated __TIMESTAMP__</span>
   <input id="search" type="text" placeholder="Search team..."/>
+  __EVENT_FILTER_HTML__
+  <button id="toggle-climb" onclick="toggleClimb()" title="Show/hide climb stats">Hide Climb</button>
   <select id="sort-by" title="Sort teams by">
     <option value="tower">Tower usage</option>
     <option value="num" selected>Team number</option>
@@ -697,6 +706,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 const DATA = __DATA__;
 const PAGE_ID = '__PAGE_ID__';
 const EVENT_NAMES_JS = __EVENT_NAMES_JS__;
+let filterEvent = localStorage.getItem('tba_filter_event') || '';
 
 const activeCharts = {};
 let compareSet = new Set();
@@ -797,6 +807,7 @@ function rebuildSidebar() {
   const fav = getFav();
   let visible = DATA.teams
     .filter(t => !hiddenSet.has(t.key) && (t.num.includes(q) || (t.nickname||'').toLowerCase().includes(q)))
+    .filter(t => !filterEvent || t.events.some(e => e.startsWith(filterEvent) || filterEvent.startsWith(e)))
     .sort(sorters[sortBy] || sorters.tower);
   if (fav) {
     const favIdx = visible.findIndex(t => t.key === fav);
@@ -1440,7 +1451,7 @@ function buildSidebar(teams) {
         <div class="team-num">#${t.num}${t.nickname ? ' <span style="font-weight:400;color:var(--muted);font-size:.8rem;">' + t.nickname + '</span>' : ''}</div>
         <div class="team-sub">${t.played}m · tower ${pct(t.tower_rate)}</div>
       </div>
-      <span class="${badgeCls}">${t.tower_matches > 0 ? '🗼 '+t.tower_matches : t.played+'m'}</span>
+      <span class="${badgeCls}">${!document.body.classList.contains('hide-climb') && t.tower_matches > 0 ? '🗼 '+t.tower_matches : t.played+'m'}</span>
       <button class="fav-star${isFav ? ' active' : ''}" title="${isFav ? 'Unfavourite' : 'Favourite'}" onclick="event.stopPropagation();toggleFav('${t.key}')">★</button>
       <button class="hide-btn" title="Hide" onclick="hideTeam(event,'${t.key}')">×</button>
     </div>`;
@@ -1492,6 +1503,16 @@ function closeSidebar() {
   document.querySelector('.sidebar-overlay')?.classList.remove('open');
 }
 
+// ── Climb toggle ──────────────────────────────────────────────────────────────
+function toggleClimb() {
+  document.body.classList.toggle('hide-climb');
+  const btn = document.getElementById('toggle-climb');
+  btn.textContent = document.body.classList.contains('hide-climb') ? 'Show Climb' : 'Hide Climb';
+  btn.classList.toggle('active', document.body.classList.contains('hide-climb'));
+  localStorage.setItem('tba_hide_climb', document.body.classList.contains('hide-climb') ? '1' : '');
+  rebuildSidebar();
+}
+
 // Boot
 document.getElementById('team-count').textContent = `${DATA.teams.length} teams`;
 const _schedUpcoming = (DATA.schedule || []).filter(m => !m.winner).length;
@@ -1500,6 +1521,40 @@ const _savedSearch = localStorage.getItem('tba_search');
 const _savedSort   = localStorage.getItem('tba_sort');
 if (_savedSearch) document.getElementById('search').value = _savedSearch;
 if (_savedSort)   document.getElementById('sort-by').value = _savedSort;
+// Restore climb toggle
+if (localStorage.getItem('tba_hide_climb') === '1') {
+  document.body.classList.add('hide-climb');
+  const _climbBtn = document.getElementById('toggle-climb');
+  _climbBtn.textContent = 'Show Climb';
+  _climbBtn.classList.add('active');
+}
+// Event filter dropdown (region-wide page only)
+if (PAGE_ID === 'region') {
+  const _evSel = document.getElementById('filter-event');
+  if (_evSel) {
+    const _evSet = new Set();
+    DATA.teams.forEach(t => t.events.forEach(e => _evSet.add(e)));
+    [..._evSet].sort().forEach(e => {
+      const opt = document.createElement('option');
+      opt.value = e;
+      opt.textContent = EVENT_NAMES_JS[e] || EVENT_NAMES_JS[e.slice(0,8)] || e.replace(/^\d{4}/,'');
+      _evSel.appendChild(opt);
+    });
+    if (filterEvent) {
+      _evSel.value = filterEvent;
+      const cnt = DATA.teams.filter(t => t.events.some(e => e.startsWith(filterEvent) || filterEvent.startsWith(e))).length;
+      document.getElementById('team-count').textContent = cnt + ' teams';
+    }
+    _evSel.addEventListener('change', () => {
+      filterEvent = _evSel.value;
+      localStorage.setItem('tba_filter_event', filterEvent);
+      document.getElementById('team-count').textContent = filterEvent
+        ? DATA.teams.filter(t => t.events.some(e => e.startsWith(filterEvent) || filterEvent.startsWith(e))).length + ' teams'
+        : DATA.teams.length + ' teams';
+      rebuildSidebar();
+    });
+  }
+}
 rebuildSidebar();
 restoreNav() || showOverview();
 </script>
@@ -1512,12 +1567,17 @@ restoreNav() || showOverview();
 def build_html(data: dict, title: str, timestamp: str, page_id: str = "region") -> str:
     embedded = json.dumps(data, separators=(",", ":"))
     event_names_js = json.dumps(EVENT_NAMES, separators=(",", ":"))
+    event_filter_html = (
+        '<select id="filter-event" title="Filter by event"><option value="">All events</option></select>'
+        if page_id == "region" else ""
+    )
     return (HTML_TEMPLATE
             .replace("__DATA__", embedded)
             .replace("__TITLE__", title)
             .replace("__TIMESTAMP__", timestamp)
             .replace("__PAGE_ID__", page_id)
-            .replace("__EVENT_NAMES_JS__", event_names_js))
+            .replace("__EVENT_NAMES_JS__", event_names_js)
+            .replace("__EVENT_FILTER_HTML__", event_filter_html))
 
 
 def write_view(event_prefix: str | None, out_path: str, title: str, timestamp: str) -> None:
