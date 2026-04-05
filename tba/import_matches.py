@@ -201,6 +201,31 @@ CREATE TABLE IF NOT EXISTS awards (
     awardee    TEXT,
     UNIQUE (event_key, award_type, team_key)
 );
+
+CREATE TABLE IF NOT EXISTS district_rankings (
+    team_key            TEXT PRIMARY KEY,
+    rank                INTEGER,
+    rookie_bonus        INTEGER,
+    point_total         INTEGER,
+    event1_key          TEXT,
+    event1_qual_pts     INTEGER,
+    event1_alliance_pts INTEGER,
+    event1_elim_pts     INTEGER,
+    event1_award_pts    INTEGER,
+    event1_total        INTEGER,
+    event2_key          TEXT,
+    event2_qual_pts     INTEGER,
+    event2_alliance_pts INTEGER,
+    event2_elim_pts     INTEGER,
+    event2_award_pts    INTEGER,
+    event2_total        INTEGER,
+    cmp_key             TEXT,
+    cmp_qual_pts        INTEGER,
+    cmp_alliance_pts    INTEGER,
+    cmp_elim_pts        INTEGER,
+    cmp_award_pts       INTEGER,
+    cmp_total           INTEGER
+);
 """
 
 
@@ -479,6 +504,44 @@ def _sync_team_names(con: sqlite3.Connection) -> None:
             sleep(0.5)  # be nice to TBA's servers
 
 
+def _tba_fetch_district_rankings(district_key: str) -> list:
+    import requests
+    url = f"{TBA_BASE}/district/{district_key}/rankings"
+    resp = requests.get(url, headers=_tba_headers())
+    sleep(0.5)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def _store_district_rankings(con: sqlite3.Connection, rankings: list) -> None:
+    """Upsert district ranking rows into district_rankings table."""
+    with con:
+        for entry in rankings:
+            tk = entry["team_key"]
+            reg = [ep for ep in entry.get("event_points", []) if not ep.get("district_cmp")]
+            cmp_eps = [ep for ep in entry.get("event_points", []) if ep.get("district_cmp")]
+            e1  = reg[0]    if len(reg)     > 0 else {}
+            e2  = reg[1]    if len(reg)     > 1 else {}
+            cmp = cmp_eps[0] if cmp_eps         else {}
+            con.execute("""
+                INSERT OR REPLACE INTO district_rankings
+                (team_key, rank, rookie_bonus, point_total,
+                 event1_key, event1_qual_pts, event1_alliance_pts, event1_elim_pts, event1_award_pts, event1_total,
+                 event2_key, event2_qual_pts, event2_alliance_pts, event2_elim_pts, event2_award_pts, event2_total,
+                 cmp_key, cmp_qual_pts, cmp_alliance_pts, cmp_elim_pts, cmp_award_pts, cmp_total)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """, (
+                tk, entry.get("rank"), entry.get("rookie_bonus", 0), entry.get("point_total", 0),
+                e1.get("event_key"),  e1.get("qual_points"),  e1.get("alliance_points"),
+                e1.get("elim_points"),  e1.get("award_points"),  e1.get("total"),
+                e2.get("event_key"),  e2.get("qual_points"),  e2.get("alliance_points"),
+                e2.get("elim_points"),  e2.get("award_points"),  e2.get("total"),
+                cmp.get("event_key"), cmp.get("qual_points"), cmp.get("alliance_points"),
+                cmp.get("elim_points"), cmp.get("award_points"), cmp.get("total"),
+            ))
+    print(f"  Stored {len(rankings)} district rankings.")
+
+
 def _finals_count(con: sqlite3.Connection, event_key: str) -> int:
     """Return the number of finals (f1) matches stored for an event."""
     row = con.execute(
@@ -561,6 +624,14 @@ def main() -> None:
 
     print("\nSyncing team names...")
     _sync_team_names(con)
+
+    print("\nFetching district rankings...")
+    try:
+        rankings = _tba_fetch_district_rankings("2026fma")
+        _store_district_rankings(con, rankings)
+    except Exception as e:
+        print(f"  Warning: could not fetch district rankings: {e}")
+
     con.close()
 
 if __name__ == "__main__":
