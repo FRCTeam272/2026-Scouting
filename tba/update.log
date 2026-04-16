@@ -294,3 +294,64 @@ Loading data from matches.db...
   index.html  →  16 pages listed
 Done. Generated 16 file(s).
 [2026-04-16 05:45:01] Staging changes...
+[main e605649] Auto-update: matches 717->717 (+0), completed 714->714 (+0) [2026-04-16 05:45:01]
+ 18 files changed, 88 insertions(+), 27 deletions(-)
+[2026-04-16 05:45:01] Pushing to origin (match data updated)...
+remote: This repository moved. Please use the new location:        
+remote:   https://github.com/FRCTeam272/2026-Scouting.git        
+To https://github.com/frcTeam272/2026-Scouting
+   762de8c..e605649  main -> main
+[2026-04-16 05:45:01] Push complete.
+[2026-04-16 05:45:01] === TBA update finished ===
+[2026-04-16 06:00:01] === TBA update started ===
+[2026-04-16 06:00:01] Matches in DB before import: 717 total, 714 completed
+[2026-04-16 06:00:01] Running import_matches.py...
+Fetching 2026fma event list from TBA...
+  10 events: ['2026mrcmp', '2026njfla', '2026njrob', '2026njski', '2026njtab', '2026njwas', '2026paben', '2026pahat', '2026paphi', '2026pawar']
+
+  2026mrcmp: 0 finals match(es) in DB — fetching from TBA...
+    Saved 0 matches to 2026mrcmp_matches.json
+    No matches yet — fetching registered team list for 2026mrcmp...
+    66 teams registered: frc10070, frc10157, frc103, frc10584, frc1089, frc10918, frc10949, frc10979, frc10993, frc11, frc1168, frc1218, frc1391, frc1403, frc1640, frc1672, frc1676, frc1712, frc1807, frc1923, frc193, frc2016, frc222, frc223, frc25, frc2539, frc2554, frc2590, frc2607, frc272, frc293, frc303, frc316, frc3314, frc341, frc3637, frc365, frc41, frc423, frc427, frc4285, frc433, frc4575, frc484, frc486, frc5113, frc5181, frc5401, frc5438, frc555, frc56, frc5895, frc6921, frc7045, frc708, frc7110, frc75, frc7587, frc8075, frc8117, frc8513, frc8706, frc9015, frc9027, frc9094, frc9416
+  2026njfla: 1 unresolved match(es) in DB — fetching from TBA...
+    Saved 81 matches to 2026njfla_matches.json
+Done 2026njfla. Inserted 0 matches, skipped 81 duplicates -> matches.db
+  2026njrob: 2 finals match(es) already in DB, no unresolved — skipping fetch
+  2026njski: 1 unresolved match(es) in DB — fetching from TBA...
+    Saved 83 matches to 2026njski_matches.json
+Done 2026njski. Inserted 0 matches, skipped 83 duplicates -> matches.db
+  2026njtab: 2 finals match(es) already in DB, no unresolved — skipping fetch
+  2026njwas: 2 finals match(es) already in DB, no unresolved — skipping fetch
+  2026paben: 3 finals match(es) already in DB, no unresolved — skipping fetch
+  2026pahat: 2 finals match(es) already in DB, no unresolved — skipping fetch
+  2026paphi: 1 unresolved match(es) in DB — fetching from TBA...
+    Saved 77 matches to 2026paphi_matches.json
+Done 2026paphi. Inserted 0 matches, skipped 77 duplicates -> matches.db
+  2026pawar: 2 finals match(es) already in DB, no unresolved — skipping fetch
+
+Syncing team names...
+
+Fetching district rankings...
+  Stored 143 district rankings.
+[2026-04-16 06:00:01] Matches in DB after import: 717 total, 714 completed
+[2026-04-16 06:00:01] Running create_view.py...
+Loading data from matches.db...
+  145 teams, 717 matches  →  Region Wide.html
+  33 teams, 82 matches  →  2026njfl.html
+  29 teams, 73 matches  →  2026njro.html
+  34 teams, 84 matches  →  2026njsk.html
+  32 teams, 79 matches  →  2026njta.html
+  30 teams, 75 matches  →  2026njwa.html
+  34 teams, 84 matches  →  2026pabe.html
+  33 teams, 81 matches  →  2026paha.html
+  31 teams, 78 matches  →  2026paph.html
+  33 teams, 81 matches  →  2026pawa.html
+  66 teams (upcoming)  →  2026mrcmp.html
+  35 teams (upcoming)  →  2026njfla.html
+  36 teams (upcoming)  →  2026njski.html
+  34 teams (upcoming)  →  2026paben.html
+  32 teams (upcoming)  →  2026paphi.html
+  district_points.html  →  143 teams
+  index.html  →  16 pages listed
+Done. Generated 16 file(s).
+[2026-04-16 06:00:01] Staging changes...
