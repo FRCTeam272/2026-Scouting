@@ -1067,8 +1067,9 @@ function loadTeam(key) {
   closeSidebar();
   document.querySelector(`.team-item[data-key="${key}"]`)?.classList.add('active');
 
-  const hasBreakdowns = t.match_history.some(m => m.auto_tower !== null || m.endgame_tower !== null);
-  const hasHub = t.match_history.some(m => m.hub_total_pts !== null);
+  const pageMatches = PAGE_ID === 'region' ? t.match_history : t.match_history.filter(m => m.event.startsWith(PAGE_ID));
+  const hasBreakdowns = pageMatches.some(m => m.auto_tower !== null || m.endgame_tower !== null);
+  const hasHub = pageMatches.some(m => m.hub_total_pts !== null);
   const contribRanked = [...DATA.teams].filter(x => x.contrib_avg !== null)
                                         .sort((a,b) => b.contrib_avg - a.contrib_avg);
   const contribRank = contribRanked.findIndex(x => x.key === t.key) + 1;
@@ -1176,7 +1177,7 @@ function loadTeam(key) {
 
     <p class="section-title">Match History</p>
     <div class="matches-grid">
-      ${t.match_history.map(m => {
+      ${pageMatches.map(m => {
         const lbl = matchLabel(m);
         const resultCls  = m.won === true ? 'result-win' : m.won === false ? 'result-loss' : m.won === 'tie' ? 'result-tie' : 'result-tbd';
         const resultText = m.won === true ? 'WIN' : m.won === false ? 'LOSS' : m.won === 'tie' ? 'TIE' : 'TBD';
@@ -1216,11 +1217,11 @@ function loadTeam(key) {
 
   // Tower level chart
   if (hasBreakdowns) {
-    const labels = t.match_history.map(m => [eventShort(m.event), matchLabel(m)]);
+    const labels = pageMatches.map(m => [eventShort(m.event), matchLabel(m)]);
     makeChart('tc-tower', { type:'bar', data:{ labels, datasets:[
-      { label:'Auto Tower Level', data: t.match_history.map(m => levelNum(m.auto_tower)),
+      { label:'Auto Tower Level', data: pageMatches.map(m => levelNum(m.auto_tower)),
         backgroundColor: P.blue+'cc', borderColor: P.blue, borderWidth:1 },
-      { label:'Endgame Tower Level', data: t.match_history.map(m => levelNum(m.endgame_tower)),
+      { label:'Endgame Tower Level', data: pageMatches.map(m => levelNum(m.endgame_tower)),
         backgroundColor: P.teal+'cc', borderColor: P.teal, borderWidth:1 },
     ]}, options: baseOpts({ scales:{ x:{grid:{color:'#2e334d'},ticks:{color:'#7b82a0'}},
       y:{grid:{color:'#2e334d'},ticks:{color:'#7b82a0'},min:0,max:4,stepSize:1,
@@ -1229,11 +1230,11 @@ function loadTeam(key) {
 
   // Hub score chart
   if (hasHub) {
-    const labels = t.match_history.map(m => [eventShort(m.event), matchLabel(m)]);
+    const labels = pageMatches.map(m => [eventShort(m.event), matchLabel(m)]);
     makeChart('tc-hub', { type:'bar', data:{ labels, datasets:[
-      { label:'Auto',    data: t.match_history.map(m => m.hub_auto_pts   ?? 0), backgroundColor: P.blue  +'cc', borderColor: P.blue,   borderWidth:1 },
-      { label:'Teleop',  data: t.match_history.map(m => m.hub_teleop_pts ?? 0), backgroundColor: P.orange+'cc', borderColor: P.orange, borderWidth:1 },
-      { label:'Endgame', data: t.match_history.map(m => m.hub_endgame_pts?? 0), backgroundColor: P.purple+'cc', borderColor: P.purple, borderWidth:1 },
+      { label:'Auto',    data: pageMatches.map(m => m.hub_auto_pts   ?? 0), backgroundColor: P.blue  +'cc', borderColor: P.blue,   borderWidth:1 },
+      { label:'Teleop',  data: pageMatches.map(m => m.hub_teleop_pts ?? 0), backgroundColor: P.orange+'cc', borderColor: P.orange, borderWidth:1 },
+      { label:'Endgame', data: pageMatches.map(m => m.hub_endgame_pts?? 0), backgroundColor: P.purple+'cc', borderColor: P.purple, borderWidth:1 },
     ]}, options: baseOpts({
       scales:{ x:{grid:{color:'#2e334d'},ticks:{color:'#7b82a0'}},
                y:{grid:{color:'#2e334d'},ticks:{color:'#7b82a0'},stacked:false} }
