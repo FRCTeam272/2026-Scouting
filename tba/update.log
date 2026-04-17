@@ -475,3 +475,9 @@ Loading data from matches.db...
   index.html  →  12 pages listed
 Done. Generated 12 file(s).
 [2026-04-16 20:00:01] Staging changes...
+[dev baeb9a4] Auto-update: matches 846->846 (+0), completed 758->758 (+0) [2026-04-16 20:00:01]
+ 14 files changed, 222 insertions(+), 155 deletions(-)
+[2026-04-16 20:00:01] Pushing to origin (match data updated)...
+Everything up-to-date
+[2026-04-16 20:00:01] Push complete.
+[2026-04-16 20:00:01] === TBA update finished ===
