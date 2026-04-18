@@ -507,6 +507,17 @@ def main() -> None:
     # Get every 2026 FMA event from TBA
     print("Fetching 2026fma event list from TBA...")
     event_keys = _tba_fetch_district_events("2026fma")
+    event_keys.extend([
+        "2026arc",
+        "2026cmptx",
+        "2026cur",
+        "2026dal",
+        "2026gal",
+        "2026hop",
+        "2026joh",
+        "2206mil",
+        "2026new"
+    ])
     print(f"  {len(event_keys)} events: {event_keys}\n")
 
     for event_key in event_keys:
@@ -515,7 +526,11 @@ def main() -> None:
         if finals < 2 or unresolved > 0:
             reason = f"{finals} finals match(es)" if finals < 2 else f"{unresolved} unresolved match(es)"
             print(f"  {event_key}: {reason} in DB — fetching from TBA...")
-            matches = _tba_fetch_matches(event_key)
+            try:
+                matches = _tba_fetch_matches(event_key)
+            except Exception as e:
+                print(f"    Warning: could not fetch matches for {event_key}: {e}")
+                continue
             # Save/overwrite local JSON
             json_path = f"{event_key}_matches.json"
             with open(json_path, "w") as f:
