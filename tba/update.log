@@ -279,3 +279,51 @@ Loading data from matches.db...
   index.html  →  12 pages listed
 Done. Generated 12 file(s).
 [2026-04-19 02:48:01] Staging changes...
+[main e41a6195] Auto-update: matches 862->862 (+0), completed 861->861 (+0) [2026-04-19 02:48:01]
+ 14 files changed, 72 insertions(+), 24 deletions(-)
+[2026-04-19 02:48:01] Pushing to origin (match data updated)...
+To https://github.com/FRCTeam272/2026-Scouting/
+   fb9ef72c..e41a6195  main -> main
+[2026-04-19 02:48:01] Push complete.
+[2026-04-19 02:48:01] === TBA update finished ===
+[2026-04-19 02:54:01] === TBA update started ===
+[2026-04-19 02:54:01] Matches in DB before import: 862 total, 861 completed
+[2026-04-19 02:54:01] Running import_matches.py...
+Fetching 2026fma event list from TBA...
+  10 events: ['2026mrcmp', '2026njfla', '2026njrob', '2026njski', '2026njtab', '2026njwas', '2026paben', '2026pahat', '2026paphi', '2026pawar']
+
+  2026mrcmp: 1 unresolved match(es) in DB — fetching from TBA...
+    Saved 147 matches to 2026mrcmp_matches.json
+Done 2026mrcmp. Inserted 0 matches, skipped 147 duplicates -> matches.db
+  2026njfla: 2 finals match(es) already in DB, no unresolved — skipping fetch
+  2026njrob: 2 finals match(es) already in DB, no unresolved — skipping fetch
+  2026njski: 2 finals match(es) already in DB, no unresolved — skipping fetch
+  2026njtab: 2 finals match(es) already in DB, no unresolved — skipping fetch
+  2026njwas: 2 finals match(es) already in DB, no unresolved — skipping fetch
+  2026paben: 3 finals match(es) already in DB, no unresolved — skipping fetch
+  2026pahat: 2 finals match(es) already in DB, no unresolved — skipping fetch
+  2026paphi: 2 finals match(es) already in DB, no unresolved — skipping fetch
+  2026pawar: 2 finals match(es) already in DB, no unresolved — skipping fetch
+
+Syncing team names...
+
+Fetching district rankings...
+  Stored 143 district rankings.
+[2026-04-19 02:54:01] Matches in DB after import: 862 total, 861 completed
+[2026-04-19 02:54:01] Running create_view.py...
+Loading data from matches.db...
+  145 teams, 862 matches  →  Region Wide.html
+  66 teams, 148 matches  →  2026mrcm.html
+  33 teams, 81 matches  →  2026njfl.html
+  29 teams, 73 matches  →  2026njro.html
+  34 teams, 83 matches  →  2026njsk.html
+  32 teams, 79 matches  →  2026njta.html
+  30 teams, 75 matches  →  2026njwa.html
+  34 teams, 84 matches  →  2026pabe.html
+  33 teams, 81 matches  →  2026paha.html
+  31 teams, 77 matches  →  2026paph.html
+  33 teams, 81 matches  →  2026pawa.html
+  district_points.html  →  143 teams
+  index.html  →  12 pages listed
+Done. Generated 12 file(s).
+[2026-04-19 02:54:01] Staging changes...
