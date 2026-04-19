@@ -67,31 +67,12 @@ $PYTHON create_view.py
 log "Staging changes..."
 git add *.html update.log
 
-data_changed=0
-if [[ "$before_count" != "$after_count" || "$before_completed" != "$after_completed" ]]; then
-    data_changed=1
-    echo "${after_count} ${after_completed}" > "$COUNT_FILE"
-    git add "$COUNT_FILE"
-fi
-
-if git diff --cached --quiet; then
-    log "Nothing changed — skipping commit."
-else
-    if (( data_changed )); then
-        delta_total="$(printf "%+d" "$((after_count - before_count))")"
-        delta_completed="$(printf "%+d" "$((after_completed - before_completed))")"
-        msg="Auto-update: matches $before_count->$after_count ($delta_total), completed $before_completed->$after_completed ($delta_completed) [$TIMESTAMP]"
-    else
-        msg="Auto-update: dashboards [$TIMESTAMP]"
-    fi
-    git commit -m "$msg"
-    if (( data_changed )); then
-        log "Pushing to origin (match data updated)..."
-        git push origin main
-        log "Push complete."
-    else
-        log "No match data updates — skipping push."
-    fi
-fi
+delta_total="$(printf "%+d" "$((after_count - before_count))")"
+delta_completed="$(printf "%+d" "$((after_completed - before_completed))")"
+msg="Auto-update: matches $before_count->$after_count ($delta_total), completed $before_completed->$after_completed ($delta_completed) [$TIMESTAMP]"
+git commit -m "$msg"
+log "Pushing to origin (match data updated)..."
+git push origin main
+log "Push complete."
 
 log "=== TBA update finished ==="

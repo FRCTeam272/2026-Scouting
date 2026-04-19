@@ -1066,8 +1066,9 @@ function loadTeam(key) {
   closeSidebar();
   document.querySelector(`.team-item[data-key="${key}"]`)?.classList.add('active');
 
-  const hasBreakdowns = t.match_history.some(m => m.auto_tower !== null || m.endgame_tower !== null);
-  const hasHub = t.match_history.some(m => m.hub_total_pts !== null);
+  const pageMatches = PAGE_ID === 'region' ? t.match_history : t.match_history.filter(m => m.event.startsWith(PAGE_ID));
+  const hasBreakdowns = pageMatches.some(m => m.auto_tower !== null || m.endgame_tower !== null);
+  const hasHub = pageMatches.some(m => m.hub_total_pts !== null);
   const contribRanked = [...DATA.teams].filter(x => x.contrib_avg !== null)
                                         .sort((a,b) => b.contrib_avg - a.contrib_avg);
   const contribRank = contribRanked.findIndex(x => x.key === t.key) + 1;
@@ -1175,7 +1176,7 @@ function loadTeam(key) {
 
     <p class="section-title">Match History</p>
     <div class="matches-grid">
-      ${t.match_history.map(m => {
+      ${pageMatches.map(m => {
         const lbl = matchLabel(m);
         const resultCls  = m.won === true ? 'result-win' : m.won === false ? 'result-loss' : m.won === 'tie' ? 'result-tie' : 'result-tbd';
         const resultText = m.won === true ? 'WIN' : m.won === false ? 'LOSS' : m.won === 'tie' ? 'TIE' : 'TBD';
@@ -1215,11 +1216,11 @@ function loadTeam(key) {
 
   // Tower level chart
   if (hasBreakdowns) {
-    const labels = t.match_history.map(m => [eventShort(m.event), matchLabel(m)]);
+    const labels = pageMatches.map(m => [eventShort(m.event), matchLabel(m)]);
     makeChart('tc-tower', { type:'bar', data:{ labels, datasets:[
-      { label:'Auto Tower Level', data: t.match_history.map(m => levelNum(m.auto_tower)),
+      { label:'Auto Tower Level', data: pageMatches.map(m => levelNum(m.auto_tower)),
         backgroundColor: P.blue+'cc', borderColor: P.blue, borderWidth:1 },
-      { label:'Endgame Tower Level', data: t.match_history.map(m => levelNum(m.endgame_tower)),
+      { label:'Endgame Tower Level', data: pageMatches.map(m => levelNum(m.endgame_tower)),
         backgroundColor: P.teal+'cc', borderColor: P.teal, borderWidth:1 },
     ]}, options: baseOpts({ scales:{ x:{grid:{color:'#2e334d'},ticks:{color:'#7b82a0'}},
       y:{grid:{color:'#2e334d'},ticks:{color:'#7b82a0'},min:0,max:4,stepSize:1,
@@ -1228,11 +1229,11 @@ function loadTeam(key) {
 
   // Hub score chart
   if (hasHub) {
-    const labels = t.match_history.map(m => [eventShort(m.event), matchLabel(m)]);
+    const labels = pageMatches.map(m => [eventShort(m.event), matchLabel(m)]);
     makeChart('tc-hub', { type:'bar', data:{ labels, datasets:[
-      { label:'Auto',    data: t.match_history.map(m => m.hub_auto_pts   ?? 0), backgroundColor: P.blue  +'cc', borderColor: P.blue,   borderWidth:1 },
-      { label:'Teleop',  data: t.match_history.map(m => m.hub_teleop_pts ?? 0), backgroundColor: P.orange+'cc', borderColor: P.orange, borderWidth:1 },
-      { label:'Endgame', data: t.match_history.map(m => m.hub_endgame_pts?? 0), backgroundColor: P.purple+'cc', borderColor: P.purple, borderWidth:1 },
+      { label:'Auto',    data: pageMatches.map(m => m.hub_auto_pts   ?? 0), backgroundColor: P.blue  +'cc', borderColor: P.blue,   borderWidth:1 },
+      { label:'Teleop',  data: pageMatches.map(m => m.hub_teleop_pts ?? 0), backgroundColor: P.orange+'cc', borderColor: P.orange, borderWidth:1 },
+      { label:'Endgame', data: pageMatches.map(m => m.hub_endgame_pts?? 0), backgroundColor: P.purple+'cc', borderColor: P.purple, borderWidth:1 },
     ]}, options: baseOpts({
       scales:{ x:{grid:{color:'#2e334d'},ticks:{color:'#7b82a0'}},
                y:{grid:{color:'#2e334d'},ticks:{color:'#7b82a0'},stacked:false} }
@@ -1821,6 +1822,213 @@ def build_index(pages: list[tuple[str, str, str]], timestamp: str, awards: list[
     return INDEX_TEMPLATE.format(timestamp=timestamp, cards=cards, awards_section=awards_section)
 
 
+def generate_district_points_page(db_path: str, timestamp: str) -> int:
+    """Generate district_points.html from district_rankings table. Returns team count."""
+    con = sqlite3.connect(db_path)
+    con.row_factory = sqlite3.Row
+    try:
+        rows = con.execute("""
+            SELECT dr.*, t.nickname
+            FROM district_rankings dr
+            LEFT JOIN teams t ON dr.team_key = t.team_key
+            ORDER BY dr.rank
+        """).fetchall()
+    except Exception:
+        rows = []
+    con.close()
+
+    if not rows:
+        return 0
+
+    def ev_name(key: str) -> str:
+        if not key:
+            return ""
+        return EVENT_NAMES.get(key[:8], key)
+
+    def ev_cell(key, qual, alliance, elim, award, total) -> str:
+        td_base = 'style="padding:10px 14px;vertical-align:top;border-bottom:1px solid var(--border);"'
+        if not key:
+            return f'<td class="col-hide" {td_base} style="padding:10px 14px;vertical-align:top;border-bottom:1px solid var(--border);color:var(--muted);">—</td>'
+        name = ev_name(key)
+        q  = qual     if qual     is not None else "—"
+        a  = alliance if alliance is not None else "—"
+        e  = elim     if elim     is not None else "—"
+        aw = award    if award    is not None else "—"
+        tot = total   if total    is not None else "—"
+        return (
+            f'<td class="col-hide" style="padding:10px 14px;vertical-align:top;border-bottom:1px solid var(--border);">'
+            f'<div style="font-weight:700;font-size:.95rem;color:var(--text);">{tot}</div>'
+            f'<div style="font-size:.7rem;color:var(--muted);margin-top:2px;">{name}</div>'
+            f'<div style="font-size:.68rem;color:var(--muted);margin-top:3px;">Q:{q} · A:{a} · E:{e} · Aw:{aw}</div>'
+            f'</td>'
+        )
+
+    tbody_rows = []
+    for r in rows:
+        tk  = r["team_key"]
+        num = tk.replace("frc", "")
+        nick = r["nickname"] or ""
+        rank = r["rank"] if r["rank"] is not None else "—"
+        bonus = r["rookie_bonus"] if r["rookie_bonus"] else "—"
+        total = r["point_total"] if r["point_total"] is not None else "—"
+
+        e1_cell  = ev_cell(r["event1_key"], r["event1_qual_pts"], r["event1_alliance_pts"],
+                           r["event1_elim_pts"], r["event1_award_pts"], r["event1_total"])
+        e2_cell  = ev_cell(r["event2_key"], r["event2_qual_pts"], r["event2_alliance_pts"],
+                           r["event2_elim_pts"], r["event2_award_pts"], r["event2_total"])
+        cmp_cell = ev_cell(r["cmp_key"],    r["cmp_qual_pts"],    r["cmp_alliance_pts"],
+                           r["cmp_elim_pts"],  r["cmp_award_pts"],   r["cmp_total"])
+
+        if isinstance(rank, int) and rank <= 22:
+            row_class = "drow hl-gold"
+        elif isinstance(rank, int) and rank <= 66:
+            row_class = "drow hl-green"
+        else:
+            row_class = "drow"
+        td = 'style="padding:10px 14px;vertical-align:top;border-bottom:1px solid var(--border);"'
+        tbody_rows.append(
+            f'<tr class="{row_class}" data-team="{num}">'
+            f'<td style="padding:10px 14px;vertical-align:top;border-bottom:1px solid var(--border);text-align:center;width:36px;"><button class="fav-btn" data-team="{num}" onclick="toggleFav(\'{num}\')">☆</button></td>'
+            f'<td {td} style="padding:10px 14px;vertical-align:top;border-bottom:1px solid var(--border);color:var(--muted);font-size:.85rem;">{rank}</td>'
+            f'<td {td} style="padding:10px 14px;vertical-align:top;border-bottom:1px solid var(--border);font-weight:700;color:var(--accent);white-space:nowrap;">#{num}</td>'
+            f'<td class="col-hide" {td} style="padding:10px 14px;vertical-align:top;border-bottom:1px solid var(--border);font-size:.85rem;">{nick}</td>'
+            f'{e1_cell}'
+            f'{e2_cell}'
+            f'<td class="col-hide" {td} style="padding:10px 14px;vertical-align:top;border-bottom:1px solid var(--border);text-align:center;color:var(--muted);font-size:.85rem;">{bonus}</td>'
+            f'{cmp_cell}'
+            f'<td {td} style="padding:10px 14px;vertical-align:top;border-bottom:1px solid var(--border);font-weight:700;font-size:1rem;color:var(--gold);white-space:nowrap;">{total}</td>'
+            f'</tr>'
+        )
+
+    thead_th = ('style="padding:8px 14px;text-align:left;font-size:.68rem;text-transform:uppercase;'
+                'letter-spacing:.07em;color:var(--muted);border-bottom:2px solid var(--border);'
+                'position:sticky;top:0;background:var(--surface2);white-space:nowrap;"')
+    thead = (
+        f'<tr>'
+        f'<th style="padding:8px 14px;text-align:center;font-size:.68rem;color:var(--muted);border-bottom:2px solid var(--border);position:sticky;top:0;background:var(--surface2);width:36px;">★</th>'
+        f'<th {thead_th}>Rank</th>'
+        f'<th {thead_th}>Team</th>'
+        f'<th class="col-hide" {thead_th}>Name</th>'
+        f'<th class="col-hide" {thead_th}>Event 1</th>'
+        f'<th class="col-hide" {thead_th}>Event 2</th>'
+        f'<th class="col-hide" {thead_th} style="padding:8px 14px;text-align:center;font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);border-bottom:2px solid var(--border);position:sticky;top:0;background:var(--surface2);">Age Bonus</th>'
+        f'<th class="col-hide" {thead_th}>Dist. CMP</th>'
+        f'<th {thead_th}>Total</th>'
+        f'</tr>'
+    )
+
+    html = f"""\
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>FRC272 — District Points 2026</title>
+  <style>
+    :root{{--bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e334d;
+          --accent:#4f8ef7;--text:#e4e6f0;--muted:#7b82a0;--gold:#f5c542;}}
+    *{{box-sizing:border-box;margin:0;padding:0;}}
+    body{{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);
+          min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px;}}
+    h1{{font-size:1.4rem;font-weight:700;color:var(--accent);margin-bottom:4px;}}
+    .ts{{color:var(--muted);font-size:.78rem;margin-bottom:6px;}}
+    .back{{color:var(--muted);font-size:.78rem;margin-bottom:24px;text-decoration:none;}}
+    .back:hover{{color:var(--accent);}}
+    .search-wrap{{width:100%;max-width:960px;margin-bottom:16px;}}
+    #search{{width:100%;padding:8px 14px;background:var(--surface);border:1px solid var(--border);
+             border-radius:8px;color:var(--text);font-size:.9rem;font-family:inherit;outline:none;}}
+    #search:focus{{border-color:var(--accent);}}
+    .table-wrap{{width:100%;max-width:960px;background:var(--surface);border:1px solid var(--border);
+                 border-radius:10px;overflow:auto;}}
+    table{{width:100%;border-collapse:collapse;}}
+    .drow:hover td{{background:var(--surface2);}}
+    .hl-gold td{{background:rgba(245,197,66,.10);border-left:3px solid var(--gold);}}
+    .hl-gold:hover td{{background:rgba(245,197,66,.18);}}
+    .hl-green td{{background:rgba(80,200,120,.08);border-left:3px solid #50c878;}}
+    .hl-green:hover td{{background:rgba(80,200,120,.15);}}
+    .legend{{width:100%;max-width:960px;margin-top:12px;font-size:.72rem;color:var(--muted);}}
+    .legend span{{margin-right:16px;}}
+    .fav-btn{{background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--muted);padding:2px 4px;transition:color .15s;line-height:1;}}
+    .fav-btn:hover,.fav-btn.active{{color:var(--gold);}}
+    .sep-cell{{text-align:center;font-size:.7rem;color:var(--muted);padding:5px;background:var(--bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border);}}
+    @media (max-width:600px){{.col-hide{{display:none;}}}}
+  </style>
+</head>
+<body>
+  <h1>District Points Rankings 2026 FMA</h1>
+  <div class="ts">Generated {timestamp} · {len(rows)} teams</div>
+  <a class="back" href="index.html">← Back to index</a>
+  <div class="search-wrap">
+    <input id="search" type="text" placeholder="Filter by team # or name…" oninput="filterRows(this.value)"/>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>{thead}</thead>
+      <tbody id="pinned"></tbody>
+      <tbody id="sep-body" style="display:none"><tr><td colspan="9" class="sep-cell">── Favorites above · All Teams below ──</td></tr></tbody>
+      <tbody id="tbody">{''.join(tbody_rows)}</tbody>
+    </table>
+  </div>
+  <div class="legend">
+    <span style="color:var(--gold);">■ Top 22 — World's Advancement (- any impact winners)</span>
+    <span style="color:#50c878;">■ Top 66 — Hard Qual for District Championship</span>
+    <span style="margin-left:16px;">Q = Qual points · A = Alliance selection · E = Elim · Aw = Award</span>
+  </div>
+<script>
+let FAVS = new Set(JSON.parse(localStorage.getItem('dp_favs') || '[]'));
+const tbody = document.getElementById('tbody');
+const pinned = document.getElementById('pinned');
+const sepBody = document.getElementById('sep-body');
+const allRows = tbody.querySelectorAll('tr');
+
+function saveFavs() {{ localStorage.setItem('dp_favs', JSON.stringify([...FAVS])); }}
+
+function renderPinned() {{
+  pinned.innerHTML = '';
+  if (FAVS.size === 0) {{ sepBody.style.display = 'none'; return; }}
+  sepBody.style.display = '';
+  FAVS.forEach(num => {{
+    const orig = tbody.querySelector('tr[data-team="' + num + '"]');
+    if (!orig) return;
+    const clone = orig.cloneNode(true);
+    const btn = clone.querySelector('.fav-btn');
+    if (btn) {{ btn.classList.add('active'); btn.textContent = '★'; }}
+    pinned.appendChild(clone);
+  }});
+  allRows.forEach(tr => {{
+    const btn = tr.querySelector('.fav-btn');
+    if (!btn) return;
+    const num = btn.dataset.team;
+    if (FAVS.has(num)) {{ btn.classList.add('active'); btn.textContent = '★'; }}
+    else {{ btn.classList.remove('active'); btn.textContent = '☆'; }}
+  }});
+}}
+
+function toggleFav(num) {{
+  if (FAVS.has(num)) {{ FAVS.delete(num); }} else {{ FAVS.add(num); }}
+  saveFavs();
+  renderPinned();
+}}
+
+function filterRows(q) {{
+  q = q.toLowerCase();
+  allRows.forEach(tr => {{
+    const text = tr.textContent.toLowerCase();
+    tr.style.display = q === '' || text.includes(q) ? '' : 'none';
+  }});
+}}
+
+renderPinned();
+</script>
+</body>
+</html>
+"""
+
+    with open("district_points.html", "w", encoding="utf-8") as f:
+        f.write(html)
+    return len(rows)
+
+
 def main():
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
     print(f"Loading data from {DB_PATH}...")
@@ -1865,6 +2073,11 @@ def main():
         n = write_upcoming_page(ep, fname, title, timestamp)
         print(f"  {n} teams (upcoming)  →  {fname}")
         pages.append((fname, display, f"{n} teams · upcoming"))
+
+    n_district = generate_district_points_page(DB_PATH, timestamp)
+    if n_district:
+        pages.insert(1, ("district_points.html", "District Points", f"{n_district} teams · FMA 2026"))
+        print(f"  district_points.html  →  {n_district} teams")
 
     awards = load_awards(DB_PATH)
     index_html = build_index(pages, timestamp, awards)
