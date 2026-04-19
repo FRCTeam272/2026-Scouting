@@ -560,6 +560,14 @@ def _unresolved_count(con: sqlite3.Connection, event_key: str) -> int:
     return row[0] if row else 0
 
 
+def _total_count(con: sqlite3.Connection, event_key: str) -> int:
+    """Return the total number of matches stored for an event."""
+    row = con.execute(
+        "SELECT COUNT(*) FROM matches WHERE event_key = ?", (event_key,)
+    ).fetchone()
+    return row[0] if row else 0
+
+
 def main() -> None:
     db_path = "matches.db"
 
@@ -567,18 +575,37 @@ def main() -> None:
     con = sqlite3.connect(db_path)
     con.executescript(SCHEMA)
 
-    # Get every 2026 FMA event from TBA
-    print("Fetching 2026fma event list from TBA...")
-    event_keys = _tba_fetch_district_events("2026fma")
+    # FIRST Championship events
+    event_keys = [
+        "2026arc",
+        "2026cmptx",
+        "2026cur",
+        "2026dal",
+        "2026gal",
+        "2026hop",
+        "2026joh",
+        "2026mil",
+        "2026new",
+    ]
     print(f"  {len(event_keys)} events: {event_keys}\n")
 
     for event_key in event_keys:
+        total = _total_count(con, event_key)
         finals = _finals_count(con, event_key)
         unresolved = _unresolved_count(con, event_key)
-        if finals < 2 or unresolved > 0:
-            reason = f"{finals} finals match(es)" if finals < 2 else f"{unresolved} unresolved match(es)"
-            print(f"  {event_key}: {reason} in DB — fetching from TBA...")
-            matches = _tba_fetch_matches(event_key)
+        if total == 0 or finals < 2 or unresolved > 0:
+            if total == 0:
+                reason = "0 matches in DB — verifying TBA has data"
+            elif finals < 2:
+                reason = f"{finals} finals match(es)"
+            else:
+                reason = f"{unresolved} unresolved match(es)"
+            print(f"  {event_key}: {reason} — fetching from TBA...")
+            try:
+                matches = _tba_fetch_matches(event_key)
+            except Exception as e:
+                print(f"    Warning: could not fetch matches for {event_key}: {e}")
+                continue
             # Save/overwrite local JSON
             json_path = f"{event_key}_matches.json"
             with open(json_path, "w") as f:
@@ -597,7 +624,7 @@ def main() -> None:
                             (event_key, tk),
                         )
         else:
-            print(f"  {event_key}: {finals} finals match(es) already in DB, no unresolved — skipping fetch")
+            print(f"  {event_key}: complete ({total} matches, {finals} finals, 0 unresolved) — skipping fetch")
 
         # Fetch awards for any event that has finals, if not already stored
         if finals >= 2:
