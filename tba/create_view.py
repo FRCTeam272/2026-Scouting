@@ -12,18 +12,17 @@ from datetime import datetime
 
 import numpy as np
 
-# TBA /district/2026fma/events → short_name, keyed by first-8-chars of event key
+# FIRST Championship 2026 divisions, keyed by event key (up to 8 chars)
 EVENT_NAMES: dict[str, str] = {
-    "2026mrcm": "Mid-Atlantic Championship",
-    "2026njfl": "Mount Olive",
-    "2026njro": "Robbinsville",
-    "2026njsk": "Montgomery",
-    "2026njta": "Seneca",
-    "2026njwa": "Warren Hills",
-    "2026pabe": "Bensalem",
-    "2026paha": "Hatboro-Horsham",
-    "2026paph": "Philadelphia",
-    "2026pawa": "Centennial",
+    "2026arc": "Archimedes",
+    "2026cmptx": "Einstein",
+    "2026cur": "Curie",
+    "2026dal": "Daly",
+    "2026gal": "Galileo",
+    "2026hop": "Hopper",
+    "2026joh": "Johnson",
+    "2026mil": "Milstein",
+    "2026new": "Newton",
 }
 
 
@@ -1833,7 +1832,7 @@ def main():
         PRIMARY KEY (event_key, team_key))""")
     event_prefixes = [r[0] for r in con.execute(
         "SELECT DISTINCT substr(match_key,1,8) FROM score_breakdowns ORDER BY 1"
-    ).fetchall()]
+    ).fetchall() if r[0] in EVENT_NAMES]
     # upcoming events: in event_teams but no matches yet
     upcoming_events = [r[0] for r in con.execute("""
         SELECT DISTINCT et.event_key FROM event_teams et
