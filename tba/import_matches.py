@@ -32,7 +32,7 @@ def _tba_fetch_matches(event_key: str) -> list:
     import requests
     url = f"{TBA_BASE}/event/{event_key}/matches"
     resp = requests.get(url, headers=_tba_headers())
-    sleep(0.5)  # be nice to TBA's servers
+    sleep(1)  # be nice to TBA's servers
     resp.raise_for_status()
     return resp.json()
 
@@ -41,7 +41,7 @@ def _tba_fetch_event_team_keys(event_key: str) -> list:
     import requests
     url = f"{TBA_BASE}/event/{event_key}/teams/keys"
     resp = requests.get(url, headers=_tba_headers())
-    sleep(0.5)  # be nice to TBA's servers
+    sleep(1)  # be nice to TBA's servers
     resp.raise_for_status()
     return resp.json()  # list of "frc####" strings
 
@@ -50,16 +50,83 @@ def _tba_fetch_event_awards(event_key: str) -> list:
     import requests
     url = f"{TBA_BASE}/event/{event_key}/awards"
     resp = requests.get(url, headers=_tba_headers())
-    sleep(0.5)
+    sleep(1)
     resp.raise_for_status()
     return resp.json()
+
+
+CHAMPIONSHIP_EVENTS = {
+    "2026arc", "2026cmptx", "2026cur", "2026dal",
+    "2026gal", "2026hop", "2026joh", "2026mil", "2026new",
+}
+
+
+def _tba_fetch_team_event_keys(team_key: str, year: int) -> list:
+    import requests
+    url = f"{TBA_BASE}/team/{team_key}/events/{year}/keys"
+    resp = requests.get(url, headers=_tba_headers())
+    sleep(1)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def _import_cmp_team_history(con: sqlite3.Connection, db_path: str, cmp_event_key: str) -> None:
+    """For every team at a championship, import their qualifier event matches."""
+    year = int(cmp_event_key[:4])
+
+    team_keys = [r[0] for r in con.execute(
+        "SELECT team_key FROM event_teams WHERE event_key = ?", (cmp_event_key,)
+    ).fetchall()]
+    if not team_keys:
+        print(f"  No teams registered for {cmp_event_key}")
+        return
+
+    # Teams that already have any match data — skip them
+    teams_with_data = {r[0] for r in con.execute(
+        "SELECT DISTINCT team_key FROM alliance_teams"
+    ).fetchall()}
+    teams_needing_fetch = [tk for tk in team_keys if tk not in teams_with_data]
+    print(f"  {len(team_keys)} teams total, {len(teams_needing_fetch)} need qualifier data fetched")
+
+    events_in_db = {r[0] for r in con.execute("SELECT DISTINCT event_key FROM matches")}
+    events_to_fetch: set[str] = set()
+
+    for i, tk in enumerate(teams_needing_fetch, 1):
+        if i == 5:
+            print(f"    Reached 5 teams needing fetch, stopping to avoid excessive TBA requests")
+            break
+        print(f"    ... {i}/{len(teams_needing_fetch)} team")
+        try:
+            for ek in _tba_fetch_team_event_keys(tk, year):
+                if ek[:8] not in CHAMPIONSHIP_EVENTS and ek not in events_in_db:
+                    events_to_fetch.add(ek)
+        except Exception as e:
+            print(f"    Warning: could not get events for {tk}: {e}")
+
+    if not events_to_fetch:
+        print("  All qualifier event data already imported")
+        return
+
+    print(f"  Fetching {len(events_to_fetch)} new qualifier events...")
+    for ek in sorted(events_to_fetch):
+        print(f"  {ek}: fetching...")
+        try:
+            matches = _tba_fetch_matches(ek)
+            if matches:
+                _insert_matches(matches, ek, db_path)
+                events_in_db.add(ek)
+                print(f"    {len(matches)} matches inserted")
+            else:
+                print(f"    No matches yet for {ek}")
+        except Exception as e:
+            print(f"    Warning: could not fetch {ek}: {e}")
 
 
 def _tba_fetch_district_events(district_key: str) -> list:
     import requests
     url = f"{TBA_BASE}/district/{district_key}/events/keys"
     resp = requests.get(url, headers=_tba_headers())
-    sleep(0.5)  # be nice to TBA's servers
+    sleep(1)  # be nice to TBA's servers
     resp.raise_for_status()
     return resp.json()  # list of event key strings
 
@@ -488,7 +555,7 @@ def _sync_team_names(con: sqlite3.Connection) -> None:
     for tk in sorted(needed):
         try:
             resp = requests.get(f"{TBA_BASE}/team/{tk}", headers=headers)
-            sleep(0.5)  # be nice to TBA's servers
+            sleep(1)  # be nice to TBA's servers
             resp.raise_for_status()
             d = resp.json()
             con.execute(
@@ -501,14 +568,14 @@ def _sync_team_names(con: sqlite3.Connection) -> None:
             print(f"  Stored team info for {tk}: {d.get('nickname')}")
         except Exception as e:
             print(f"  Warning: could not fetch {tk}: {e}")
-            sleep(0.5)  # be nice to TBA's servers
+            sleep(1)  # be nice to TBA's servers
 
 
 def _tba_fetch_district_rankings(district_key: str) -> list:
     import requests
     url = f"{TBA_BASE}/district/{district_key}/rankings"
     resp = requests.get(url, headers=_tba_headers())
-    sleep(0.5)
+    sleep(1)
     resp.raise_for_status()
     return resp.json()
 
@@ -566,6 +633,39 @@ def _total_count(con: sqlite3.Connection, event_key: str) -> int:
         "SELECT COUNT(*) FROM matches WHERE event_key = ?", (event_key,)
     ).fetchone()
     return row[0] if row else 0
+
+
+def _import_qualifier_events(con: sqlite3.Connection, db_path: str) -> None:
+    """Fetch and insert matches for all qualifier events found in district_rankings."""
+    rows = con.execute(
+        "SELECT DISTINCT event_key FROM ("
+        "  SELECT event1_key AS event_key FROM district_rankings WHERE event1_key IS NOT NULL"
+        "  UNION SELECT event2_key FROM district_rankings WHERE event2_key IS NOT NULL"
+        ")"
+    ).fetchall()
+    qualifier_events = [r[0] for r in rows]
+
+    if not qualifier_events:
+        print("  No qualifier events found in district rankings — skipping")
+        return
+
+    print(f"  {len(qualifier_events)} qualifier events found")
+    for event_key in sorted(qualifier_events):
+        total = _total_count(con, event_key)
+        if total > 0:
+            print(f"  {event_key}: {total} matches already in DB — skipping")
+            continue
+        print(f"  {event_key}: fetching from TBA...")
+        try:
+            matches = _tba_fetch_matches(event_key)
+        except Exception as e:
+            print(f"    Warning: could not fetch {event_key}: {e}")
+            continue
+        if matches:
+            _insert_matches(matches, event_key, db_path)
+            print(f"    Inserted {len(matches)} matches")
+        else:
+            print(f"    No matches returned for {event_key}")
 
 
 def main() -> None:
@@ -658,6 +758,12 @@ def main() -> None:
         _store_district_rankings(con, rankings)
     except Exception as e:
         print(f"  Warning: could not fetch district rankings: {e}")
+
+    print("\nFetching qualifier event matches...")
+    _import_qualifier_events(con, db_path)
+
+    print("\nFetching 2026cmptx team qualifier history...")
+    _import_cmp_team_history(con, db_path, "2026cmptx")
 
     con.close()
 
