@@ -1,246 +1,6 @@
-[2026-04-19 07:48:01] === TBA update started ===
-[2026-04-19 07:48:01] Matches in DB before import: 862 total, 861 completed
-[2026-04-19 07:48:01] Running import_matches.py...
-Fetching 2026fma event list from TBA...
-  10 events: ['2026mrcmp', '2026njfla', '2026njrob', '2026njski', '2026njtab', '2026njwas', '2026paben', '2026pahat', '2026paphi', '2026pawar']
-
-  2026mrcmp: 1 unresolved match(es) in DB — fetching from TBA...
-    Saved 147 matches to 2026mrcmp_matches.json
-Done 2026mrcmp. Inserted 0 matches, skipped 147 duplicates -> matches.db
-  2026njfla: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026njrob: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026njski: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026njtab: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026njwas: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026paben: 3 finals match(es) already in DB, no unresolved — skipping fetch
-  2026pahat: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026paphi: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026pawar: 2 finals match(es) already in DB, no unresolved — skipping fetch
-
-Syncing team names...
-
-Fetching district rankings...
-  Stored 143 district rankings.
-[2026-04-19 07:48:01] Matches in DB after import: 862 total, 861 completed
-[2026-04-19 07:48:01] Running create_view.py...
-Loading data from matches.db...
-  145 teams, 862 matches  →  Region Wide.html
-  66 teams, 148 matches  →  2026mrcm.html
-  33 teams, 81 matches  →  2026njfl.html
-  29 teams, 73 matches  →  2026njro.html
-  34 teams, 83 matches  →  2026njsk.html
-  32 teams, 79 matches  →  2026njta.html
-  30 teams, 75 matches  →  2026njwa.html
-  34 teams, 84 matches  →  2026pabe.html
-  33 teams, 81 matches  →  2026paha.html
-  31 teams, 77 matches  →  2026paph.html
-  33 teams, 81 matches  →  2026pawa.html
-  district_points.html  →  143 teams
-  index.html  →  12 pages listed
-Done. Generated 12 file(s).
-[2026-04-19 07:48:01] Staging changes...
-[main c2386537] Auto-update: matches 862->862 (+0), completed 861->861 (+0) [2026-04-19 07:48:01]
- 14 files changed, 30 insertions(+), 510 deletions(-)
-[2026-04-19 07:48:01] Pushing to origin (match data updated)...
-To https://github.com/FRCTeam272/2026-Scouting/
-   63341b52..c2386537  main -> main
-[2026-04-19 07:48:01] Push complete.
-[2026-04-19 07:48:01] === TBA update finished ===
-[2026-04-19 07:54:01] === TBA update started ===
-[2026-04-19 07:54:01] Matches in DB before import: 862 total, 861 completed
-[2026-04-19 07:54:01] Running import_matches.py...
-Fetching 2026fma event list from TBA...
-  10 events: ['2026mrcmp', '2026njfla', '2026njrob', '2026njski', '2026njtab', '2026njwas', '2026paben', '2026pahat', '2026paphi', '2026pawar']
-
-  2026mrcmp: 1 unresolved match(es) in DB — fetching from TBA...
-    Saved 147 matches to 2026mrcmp_matches.json
-Done 2026mrcmp. Inserted 0 matches, skipped 147 duplicates -> matches.db
-  2026njfla: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026njrob: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026njski: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026njtab: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026njwas: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026paben: 3 finals match(es) already in DB, no unresolved — skipping fetch
-  2026pahat: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026paphi: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026pawar: 2 finals match(es) already in DB, no unresolved — skipping fetch
-
-Syncing team names...
-
-Fetching district rankings...
-  Stored 143 district rankings.
-[2026-04-19 07:54:01] Matches in DB after import: 862 total, 861 completed
-[2026-04-19 07:54:01] Running create_view.py...
-Loading data from matches.db...
-  145 teams, 862 matches  →  Region Wide.html
-  66 teams, 148 matches  →  2026mrcm.html
-  33 teams, 81 matches  →  2026njfl.html
-  29 teams, 73 matches  →  2026njro.html
-  34 teams, 83 matches  →  2026njsk.html
-  32 teams, 79 matches  →  2026njta.html
-  30 teams, 75 matches  →  2026njwa.html
-  34 teams, 84 matches  →  2026pabe.html
-  33 teams, 81 matches  →  2026paha.html
-  31 teams, 77 matches  →  2026paph.html
-  33 teams, 81 matches  →  2026pawa.html
-  district_points.html  →  143 teams
-  index.html  →  12 pages listed
-Done. Generated 12 file(s).
-[2026-04-19 07:54:01] Staging changes...
-[main ebfba511] Auto-update: matches 862->862 (+0), completed 861->861 (+0) [2026-04-19 07:54:01]
- 14 files changed, 72 insertions(+), 24 deletions(-)
-[2026-04-19 07:54:01] Pushing to origin (match data updated)...
-To https://github.com/FRCTeam272/2026-Scouting/
-   c2386537..ebfba511  main -> main
-[2026-04-19 07:54:01] Push complete.
-[2026-04-19 07:54:01] === TBA update finished ===
-[2026-04-19 08:00:01] === TBA update started ===
-[2026-04-19 08:00:01] Matches in DB before import: 862 total, 861 completed
-[2026-04-19 08:00:01] Running import_matches.py...
-Fetching 2026fma event list from TBA...
-  10 events: ['2026mrcmp', '2026njfla', '2026njrob', '2026njski', '2026njtab', '2026njwas', '2026paben', '2026pahat', '2026paphi', '2026pawar']
-
-  2026mrcmp: 1 unresolved match(es) in DB — fetching from TBA...
-    Saved 147 matches to 2026mrcmp_matches.json
-Done 2026mrcmp. Inserted 0 matches, skipped 147 duplicates -> matches.db
-  2026njfla: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026njrob: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026njski: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026njtab: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026njwas: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026paben: 3 finals match(es) already in DB, no unresolved — skipping fetch
-  2026pahat: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026paphi: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026pawar: 2 finals match(es) already in DB, no unresolved — skipping fetch
-
-Syncing team names...
-
-Fetching district rankings...
-  Stored 143 district rankings.
-[2026-04-19 08:00:01] Matches in DB after import: 862 total, 861 completed
-[2026-04-19 08:00:01] Running create_view.py...
-Loading data from matches.db...
-  145 teams, 862 matches  →  Region Wide.html
-  66 teams, 148 matches  →  2026mrcm.html
-  33 teams, 81 matches  →  2026njfl.html
-  29 teams, 73 matches  →  2026njro.html
-  34 teams, 83 matches  →  2026njsk.html
-  32 teams, 79 matches  →  2026njta.html
-  30 teams, 75 matches  →  2026njwa.html
-  34 teams, 84 matches  →  2026pabe.html
-  33 teams, 81 matches  →  2026paha.html
-  31 teams, 77 matches  →  2026paph.html
-  33 teams, 81 matches  →  2026pawa.html
-  district_points.html  →  143 teams
-  index.html  →  12 pages listed
-Done. Generated 12 file(s).
-[2026-04-19 08:00:01] Staging changes...
-[main 1e57f90d] Auto-update: matches 862->862 (+0), completed 861->861 (+0) [2026-04-19 08:00:01]
- 14 files changed, 72 insertions(+), 24 deletions(-)
-[2026-04-19 08:00:01] Pushing to origin (match data updated)...
-To https://github.com/FRCTeam272/2026-Scouting/
-   ebfba511..1e57f90d  main -> main
-[2026-04-19 08:00:01] Push complete.
-[2026-04-19 08:00:01] === TBA update finished ===
-[2026-04-19 08:06:01] === TBA update started ===
-[2026-04-19 08:06:01] Matches in DB before import: 862 total, 861 completed
-[2026-04-19 08:06:01] Running import_matches.py...
-Fetching 2026fma event list from TBA...
-  10 events: ['2026mrcmp', '2026njfla', '2026njrob', '2026njski', '2026njtab', '2026njwas', '2026paben', '2026pahat', '2026paphi', '2026pawar']
-
-  2026mrcmp: 1 unresolved match(es) in DB — fetching from TBA...
-    Saved 147 matches to 2026mrcmp_matches.json
-Done 2026mrcmp. Inserted 0 matches, skipped 147 duplicates -> matches.db
-  2026njfla: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026njrob: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026njski: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026njtab: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026njwas: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026paben: 3 finals match(es) already in DB, no unresolved — skipping fetch
-  2026pahat: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026paphi: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026pawar: 2 finals match(es) already in DB, no unresolved — skipping fetch
-
-Syncing team names...
-
-Fetching district rankings...
-  Stored 143 district rankings.
-[2026-04-19 08:06:01] Matches in DB after import: 862 total, 861 completed
-[2026-04-19 08:06:01] Running create_view.py...
-Loading data from matches.db...
-  145 teams, 862 matches  →  Region Wide.html
-  66 teams, 148 matches  →  2026mrcm.html
-  33 teams, 81 matches  →  2026njfl.html
-  29 teams, 73 matches  →  2026njro.html
-  34 teams, 83 matches  →  2026njsk.html
-  32 teams, 79 matches  →  2026njta.html
-  30 teams, 75 matches  →  2026njwa.html
-  34 teams, 84 matches  →  2026pabe.html
-  33 teams, 81 matches  →  2026paha.html
-  31 teams, 77 matches  →  2026paph.html
-  33 teams, 81 matches  →  2026pawa.html
-  district_points.html  →  143 teams
-  index.html  →  12 pages listed
-Done. Generated 12 file(s).
-[2026-04-19 08:06:01] Staging changes...
-[main 29baeeef] Auto-update: matches 862->862 (+0), completed 861->861 (+0) [2026-04-19 08:06:01]
- 14 files changed, 72 insertions(+), 24 deletions(-)
-[2026-04-19 08:06:01] Pushing to origin (match data updated)...
-To https://github.com/FRCTeam272/2026-Scouting/
-   1e57f90d..29baeeef  main -> main
-[2026-04-19 08:06:01] Push complete.
-[2026-04-19 08:06:01] === TBA update finished ===
-[2026-04-19 08:12:01] === TBA update started ===
-[2026-04-19 08:12:01] Matches in DB before import: 862 total, 861 completed
-[2026-04-19 08:12:01] Running import_matches.py...
-Fetching 2026fma event list from TBA...
-  10 events: ['2026mrcmp', '2026njfla', '2026njrob', '2026njski', '2026njtab', '2026njwas', '2026paben', '2026pahat', '2026paphi', '2026pawar']
-
-  2026mrcmp: 1 unresolved match(es) in DB — fetching from TBA...
-    Saved 147 matches to 2026mrcmp_matches.json
-Done 2026mrcmp. Inserted 0 matches, skipped 147 duplicates -> matches.db
-  2026njfla: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026njrob: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026njski: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026njtab: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026njwas: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026paben: 3 finals match(es) already in DB, no unresolved — skipping fetch
-  2026pahat: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026paphi: 2 finals match(es) already in DB, no unresolved — skipping fetch
-  2026pawar: 2 finals match(es) already in DB, no unresolved — skipping fetch
-
-Syncing team names...
-
-Fetching district rankings...
-  Stored 143 district rankings.
-[2026-04-19 08:12:01] Matches in DB after import: 862 total, 861 completed
-[2026-04-19 08:12:01] Running create_view.py...
-Loading data from matches.db...
-  145 teams, 862 matches  →  Region Wide.html
-  66 teams, 148 matches  →  2026mrcm.html
-  33 teams, 81 matches  →  2026njfl.html
-  29 teams, 73 matches  →  2026njro.html
-  34 teams, 83 matches  →  2026njsk.html
-  32 teams, 79 matches  →  2026njta.html
-  30 teams, 75 matches  →  2026njwa.html
-  34 teams, 84 matches  →  2026pabe.html
-  33 teams, 81 matches  →  2026paha.html
-  31 teams, 77 matches  →  2026paph.html
-  33 teams, 81 matches  →  2026pawa.html
-  district_points.html  →  143 teams
-  index.html  →  12 pages listed
-Done. Generated 12 file(s).
-[2026-04-19 08:12:01] Staging changes...
-[main 4ca757ee] Auto-update: matches 862->862 (+0), completed 861->861 (+0) [2026-04-19 08:12:01]
- 14 files changed, 72 insertions(+), 24 deletions(-)
-[2026-04-19 08:12:01] Pushing to origin (match data updated)...
-To https://github.com/FRCTeam272/2026-Scouting/
-   29baeeef..4ca757ee  main -> main
-[2026-04-19 08:12:01] Push complete.
-[2026-04-19 08:12:01] === TBA update finished ===
-[2026-04-22 16:30:01] === TBA update started ===
-[2026-04-22 16:30:01] Matches in DB before import: 0 total, 0 completed
-[2026-04-22 16:30:01] Running import_matches.py...
+[2026-04-22 17:00:01] === TBA update started ===
+[2026-04-22 17:00:01] Matches in DB before import: 2258 total, 2258 completed
+[2026-04-22 17:00:01] Running import_matches.py...
   9 events: ['2026arc', '2026cmptx', '2026cur', '2026dal', '2026gal', '2026hop', '2026joh', '2026mil', '2026new']
 
   2026arc: 0 matches in DB — verifying TBA has data — fetching from TBA...
@@ -281,367 +41,588 @@ To https://github.com/FRCTeam272/2026-Scouting/
     0 teams registered: 
 
 Syncing team names...
-  Stored team info for frc422: The Mech Tech Dragons
-  Stored team info for frc424: Rust Belt Robotics
-  Stored team info for frc4253: Raid Zero
-  Stored team info for frc4256: Cyborg Cats
-  Stored team info for frc4270: Crusaders
-  Stored team info for frc4272: Maverick Robotics
-  Stored team info for frc4322: Clockwork
-  Stored team info for frc4362: Gems
-  Stored team info for frc4391: BraveBots
-  Stored team info for frc4400: Cerbotics - Peñoles
-  Stored team info for frc4403: PrepaTec - ROULT - Peñoles
-  Stored team info for frc4414: HighTide
-  Stored team info for frc4421: FORGE Robotics
-  Stored team info for frc4450: Olympia Robotics Federation
-  Stored team info for frc4451: ROBOTZ Garage
-  Stored team info for frc4469: R.A.I.D. (Raider Artificial Intelligence Division)
-  Stored team info for frc4476: W.A.F.F.L.E.S.
-  Stored team info for frc4481: Team Rembrandts
-  Stored team info for frc449: The Blair Robot Project
-  Stored team info for frc4499: The Highlanders
-  Stored team info for frc4522: Team SCREAM
-  Stored team info for frc4561: TerrorBytes
-  Stored team info for frc4590: GreenBlitz
-  Stored team info for frc4593: Rapid Acceleration
-  Stored team info for frc4607: C.I.S.
-  Stored team info for frc4611: OZone
-  Stored team info for frc4613: Barker Redbacks
-  Stored team info for frc4635: PrepaTec - Botbusters
-  Stored team info for frc4646: Wildcard Robotics
-  Stored team info for frc4655: Stateline Robotics
-  Stored team info for frc4674: RoboJacks
-  Stored team info for frc4678: CyberCavs
-  Stored team info for frc469: Las Guerrillas
-  Stored team info for frc4698: Raider Robotics
-  Stored team info for frc4728: ROCORI Robotics
-  Stored team info for frc4766: Team SCREAM Jr.
-  Stored team info for frc4786: Nicolet FEAR
-  Stored team info for frc4795: Eastbots
-  Stored team info for frc48: Team E.L.I.T.E.
-  Stored team info for frc484: Roboforce
-  Stored team info for frc4905: Andromeda One
-  Stored team info for frc4907: Thunderstamps
-  Stored team info for frc4915: Spartronics
-  Stored team info for frc494: Martians
-  Stored team info for frc4946: The Alpha Dogs
-  Stored team info for frc4967: That ONE Team-OurNextEngineers
-  Stored team info for frc498: The Cobra Commanders
-  Stored team info for frc5000: HAMMERHEADS
-  Stored team info for frc5010: Tiger Dynasty
-  Stored team info for frc5026: Iron Panthers
-  Stored team info for frc503: Frog Force
-  Stored team info for frc5066: Singularity
-  Stored team info for frc5086: Cadillac Connectors
-  Stored team info for frc51: Wings of Fire
-  Stored team info for frc5166: Fabricators
-  Stored team info for frc5181: Explorer Robotics
-  Stored team info for frc5193: Pantheon
-  Stored team info for frc5199: Robot Dolphins From Outer Space
-  Stored team info for frc5216: E-Ville Empire
-  Stored team info for frc5338: RoboLoCo
-  Stored team info for frc5348: Charger Robotics
-  Stored team info for frc540: TALON 540 Godwin Robotics
-  Stored team info for frc5406: Celt-X
-  Stored team info for frc5414: Pearadox
-  Stored team info for frc5454: Obsidian
-  Stored team info for frc5460: Strike Zone
-  Stored team info for frc5462: 2Paw Robotics
-  Stored team info for frc5468: Chaos Theory
-  Stored team info for frc548: Robostangs
-  Stored team info for frc5534: Onaway Onabots
-  Stored team info for frc5549: Gryphon Robotics
-  Stored team info for frc5550: BRONChO BOTS
-  Stored team info for frc5557: BB-R8ERS
-  Stored team info for frc5572: Rosbots
-  Stored team info for frc5577: Kinematic Wolves
-  Stored team info for frc5653: Iron Mosquitos
-  Stored team info for frc5665: FENERBAHÇE DOGUS SPARC
-  Stored team info for frc5705: DESERT EAGLES - JOHN DEERE
-  Stored team info for frc571: Paragon Robotics
-  Stored team info for frc5712: Hemlock's Gray Matter
-  Stored team info for frc573: Mech Warriors
-  Stored team info for frc5736: Kingsmen Robotics
-  Stored team info for frc5801: CTC Inspire
-  Stored team info for frc581: Blazing Bulldogs
-  Stored team info for frc5813: Morpheus
-  Stored team info for frc5829: Awtybots
-  Stored team info for frc5847: Ironclad
-  Stored team info for frc587: The Hedgehogs
-  Stored team info for frc589: Falkon Robotics
-  Stored team info for frc5895: Peddie Robotics
-  Stored team info for frc59: RamTech
-  Stored team info for frc5907: CC Shambots
-  Stored team info for frc5913: Patriotics
-  Stored team info for frc5937: MI Robotics
-  Stored team info for frc5940: BREAD
-  Stored team info for frc5948: PrepaTec - Lebotics
-  Stored team info for frc5951: Makers Assemble
-  Stored team info for frc5968: Little Apple Cyborgs
-  Stored team info for frc5985: Project Bucephalus
-  Stored team info for frc5987: Galaxia in memory of David Zohar
-  Stored team info for frc599: The Robodox
-  Stored team info for frc6002: ZooBOTix
-  Stored team info for frc6017: PrepaTec - Cyberius
-  Stored team info for frc6036: Peninsula Robotics
-  Stored team info for frc604: Quixilver
-  Stored team info for frc6045: Sabre Robotics
-  Stored team info for frc6090: Wayland Wildcats
-  Stored team info for frc6106: PrepaTec - TecGear
-  Stored team info for frc6121: RoboVikes
-  Stored team info for frc614: Night Hawks
-  Stored team info for frc6152: Robo-Falcons
-  Stored team info for frc619: Cavalier Robotics
-  Stored team info for frc6200: PrepaTec - XRAMS
-  Stored team info for frc6201: The Highlanders
-  Stored team info for frc6238: Popcorn Penguins
-  Stored team info for frc624: CRyptonite
-  Stored team info for frc6324: The Blue Devils
-  Stored team info for frc6328: Mechanical Advantage
-  Stored team info for frc6329: The Bucks' Wrath
-  Stored team info for frc6352: LAUNCH TEAM
-  Stored team info for frc6366: RAM Rodz Robotics
-  Stored team info for frc6369: Mercenary Robotics
-  Stored team info for frc6391: Ursuline Bearbotics
-  Stored team info for frc6413: Degrees of Freedom
-  Stored team info for frc6417: Fridolins
-  Stored team info for frc6429: 4th Dimension
-  Stored team info for frc6436: PARS ROBOTICS
-  Stored team info for frc6459: AG Robotik
-  Stored team info for frc6487: Clockwork Knights
-  Stored team info for frc6497: Pymble P-Platers
-  Stored team info for frc6510: Pymble Pride
-  Stored team info for frc6517: So-Kno Robo
-  Stored team info for frc6528: Terror Bytes
-  Stored team info for frc6615: Bellevillains
-  Stored team info for frc6639: The Mechanical Minds
-  Stored team info for frc6647: PrepaTec - VOLTEC
-  Stored team info for frc6652: Tigres
-  Stored team info for frc6665: C-Otters
-  Stored team info for frc6696: Cardinal Dynamics
-  Stored team info for frc67: The HOT Team
-  Stored team info for frc6766: AtomStorm
-  Stored team info for frc6773: Max Throttle Mavericks
-  Stored team info for frc68: Truck Town Thunder
-  Stored team info for frc6800: Valor
-  Stored team info for frc6829: Ignite Robotics
-  Stored team info for frc686: Bovine Intervention
-  Stored team info for frc687: The Nerd Herd
-  Stored team info for frc6907: The G.O.A.T
-  Stored team info for frc6911: SO BOTZ
-  Stored team info for frc6919: The Commodores
-  Stored team info for frc6925: W.A.Robotics
-  Stored team info for frc694: StuyPulse
-  Stored team info for frc6940: Violet Z
-  Stored team info for frc6941: IronPulse Robotics
-  Stored team info for frc695: Bison Robotics
-  Stored team info for frc6985: ENKA TECH
-  Stored team info for frc6988: ACI35
-  Stored team info for frc6989: KAISER
-  Stored team info for frc6998: Unipards
-  Stored team info for frc70: More Martians
-  Stored team info for frc7028: Binary Battalion
-  Stored team info for frc7039: ❌⭕
-  Stored team info for frc7160: Ludington O-Bots
-  Stored team info for frc7166: Red Thunder Robotics
-  Stored team info for frc7220: Steel Falcons
-  Stored team info for frc7250: OsCODEa 0w|5
-  Stored team info for frc7257: Semiconductors
-  Stored team info for frc7287: Esquimalt Atom Smashers
-  Stored team info for frc7407: Wired Boars
-  Stored team info for frc7415: Jaguar Robotics Sponsored By Feit Electric
-  Stored team info for frc7421: PrepaTec - OVERTURE
-  Stored team info for frc7426: PAIR OF DICE ROBOTICS
-  Stored team info for frc7451: AvengerRobotics
-  Stored team info for frc7457: suPURDUEper Robotics
-  Stored team info for frc7520: Team MineKee
-  Stored team info for frc7525: Pioneers
-  Stored team info for frc7536: ANKA ROBOTICS
-  Stored team info for frc7539: Elev8
-  Stored team info for frc7551: Extreme Mechanism
-  Stored team info for frc7558: ALT-F4
-  Stored team info for frc7563: SESI SENAI MEGAZORD
-  Stored team info for frc7565: SESI SENAI ROBONÁTICOS
-  Stored team info for frc7567: SESI SENAI OCTOPUS
-  Stored team info for frc7594: Nautilus
-  Stored team info for frc761: TechPUPS
-  Stored team info for frc7632: An Kang Robotics Maker
-  Stored team info for frc7712: ACCN UMOJA
-  Stored team info for frc7717: Steam Punks
-  Stored team info for frc772: Sabre Bytes Robotics
-  Stored team info for frc7763: Carrborobotics
-  Stored team info for frc7769: The CREW
-  Stored team info for frc7840: EMONER ROBOTICS
-  Stored team info for frc7890: SeQuEnCe
-  Stored team info for frc7915: Ripon Robotics
-  Stored team info for frc8: Paly Robotics
-  Stored team info for frc8005: Mega MeadowBots
-  Stored team info for frc8020: CyberpunK
-  Stored team info for frc8044: Denham Venom
-  Stored team info for frc8046: LakerBots
-  Stored team info for frc8069: Super Hornets
-  Stored team info for frc8119: TigerBotics
-  Stored team info for frc8158: Bosphorus Robotics
-  Stored team info for frc8159: Golden Horn
-  Stored team info for frc818: The Steel Armadillos
-  Stored team info for frc8214: Cyber Unicorn
-  Stored team info for frc8229: Balikbayan Bots
-  Stored team info for frc8267: Riptide Robotics 8267
-  Stored team info for frc8280: K9.0 Robotics
-  Stored team info for frc836: The RoboBees
-  Stored team info for frc8373: The Flying Octopi
-  Stored team info for frc8393: The Giant Diencephalic BrainSTEM Robotics Team
-  Stored team info for frc8429: Valence Robotics
-  Stored team info for frc8513: Sisters 1st
-  Stored team info for frc8575: The Due Westerners
-  Stored team info for frc8595: This Is How We Play
-  Stored team info for frc8608: Alpha Bots
-  Stored team info for frc8612: Calvin Christian Robotics
-  Stored team info for frc8613: Barker Greybacks
-  Stored team info for frc868: TechHOUNDS
-  Stored team info for frc870: TEAM  R. I. C. E.
-  Stored team info for frc8724: Mayhem
-  Stored team info for frc8725: MistyPanther
-  Stored team info for frc8749: Farmersville  Robotics
-  Stored team info for frc88: TJ²
-  Stored team info for frc8808: SWLA Tech Pirates
-  Stored team info for frc8817: Buccaneer Robotics
-  Stored team info for frc8858: Beast from the East
-  Stored team info for frc8873: Rockefeller Robotics
-  Stored team info for frc8884: Knight Owls
-  Stored team info for frc9001: Delta Force
-  Stored team info for frc9023: Future Martians
-  Stored team info for frc9025: Mechameleons
-  Stored team info for frc9029: Team NF
-  Stored team info for frc9032: RoboWhales
-  Stored team info for frc9066: Cavalo Vendado
-  Stored team info for frc9067: The Goonies
-  Stored team info for frc9068: The Chargers
-  Stored team info for frc9072: TigerBots
-  Stored team info for frc9077: The Crown
-  Stored team info for frc9084: Octobots
-  Stored team info for frc9094: The Earthquakers
-  Stored team info for frc910: The Foley Freeze
-  Stored team info for frc9126: Silver Hawks
-  Stored team info for frc9128: ITKAN Robotics
-  Stored team info for frc9140: The Robobots
-  Stored team info for frc9175: BrainMachine-FRC
-  Stored team info for frc9200: SESI SENAI STARDUST
-  Stored team info for frc9245: Laker Dreadnoughts
-  Stored team info for frc9277: Sparkans
-  Stored team info for frc930: Mukwonago BEARs
-  Stored team info for frc9401: Midas' Mayhem
-  Stored team info for frc9408: Warren Warbots
-  Stored team info for frc9427: iDeer
-  Stored team info for frc9449: Yellowjackets
-  Stored team info for frc9450: Velocity Raptors
-  Stored team info for frc9470: Ctrl-Alt-Defeat
-  Stored team info for frc948: NRG (Newport Robotics Group)
-  Stored team info for frc9483: Overcharge
-  Stored team info for frc9484: Robot's District
-  Stored team info for frc9496: LYNK
-  Stored team info for frc9545: Caracal Robotics
-  Stored team info for frc955: Ctrl C
-  Stored team info for frc9572: CC Shambytes
-  Stored team info for frc9597: Luban Robotics
-  Stored team info for frc9609: Paraducks
-  Stored team info for frc9635: Cyber Rabbit
-  Stored team info for frc9644: NEIA Robotics
-  Stored team info for frc9646: The Marinators
-  Stored team info for frc9692: Sigma
-  Stored team info for frc971: Spartan Robotics
-  Stored team info for frc972: Iron Claw
-  Stored team info for frc973: Greybots
-  Stored team info for frc9757: Mecha Marauders
-  Stored team info for frc9771: FPRO
-  Stored team info for frc9785: Alectrona
-  Stored team info for frc987: HIGHROLLERS
-  Stored team info for frc999: MechaRAMS
+  Stored team info for frc10032: Singularity
+  Stored team info for frc10070: Ghost Bots
+  Stored team info for frc10143: Northeast Vikings
+  Stored team info for frc10157: Roman Robotics
+  Stored team info for frc10170: ND Robotics
+  Stored team info for frc10172: Apex Archers
+  Stored team info for frc1018: Pike RoboDevils
+  Stored team info for frc10183: ARC
+  Stored team info for frc102: The Gearheads
+  Stored team info for frc10217: Catahoula Blue Dogs
+  Stored team info for frc10232: Killer Kardinals 2
+  Stored team info for frc10256: Team Scrap Metal
+  Stored team info for frc10309: Jayhawks Robotics
+  Stored team info for frc10332: Carroll Charger Robotics
+  Stored team info for frc10333: Elevation
+  Stored team info for frc10338: 10338 - CircuitMakers
+  Stored team info for frc10342: Lost in Translation
+  Stored team info for frc10350: Canberra CIPHER
+  Stored team info for frc10366: Builder Bears
+  Stored team info for frc10376: Plutonium Panthers
+  Stored team info for frc10380: The Dragon Hunters
+  Stored team info for frc10384: Sparkanovas
+  Stored team info for frc10400: DART Doane Academy Robotics Team
+  Stored team info for frc10411: G-Code Generals
+  Stored team info for frc10434: CYBEARS
+  Stored team info for frc10437: Amity Robotics Club (ARC)
+  Stored team info for frc10446: Circuitron
+  Stored team info for frc10482: BuzzBots
+  Stored team info for frc10497: Bayou Bots
+  Stored team info for frc10506: Crash Test Dummies
+  Stored team info for frc10514: Mixed Métal
+  Stored team info for frc10518: D.A.D.S
+  Stored team info for frc10550: 35 Soaring Roneagles
+  Stored team info for frc10552: Mazenod Machinists
+  Stored team info for frc10584: Ridge Robotics
+  Stored team info for frc10600: Two Steps Ahead
+  Stored team info for frc10655: PHS Spartan Synergy
+  Stored team info for frc10661: Blue Phoenix
+  Stored team info for frc1089: Team Mercury
+  Stored team info for frc10905: Team LOVE
+  Stored team info for frc10918: Bluesteel Dragons
+  Stored team info for frc10929: Tarpon Robotics
+  Stored team info for frc10933: Tie Dye Samurai
+  Stored team info for frc10943: WJH RoboStangs
+  Stored team info for frc10949: Metalheads
+  Stored team info for frc10958: SWing
+  Stored team info for frc10961: Hyper Wave
+  Stored team info for frc10988: Desert Storm
+  Stored team info for frc10989: Blast Robotics
+  Stored team info for frc10993: EP Robotics
+  Stored team info for frc10994: SSES Phenoms
+  Stored team info for frc10995: ACS Eagle Robotics
+  Stored team info for frc10997: St. George
+  Stored team info for frc11100: Team Epsilon
+  Stored team info for frc11104: Phoenix Phanatics
+  Stored team info for frc11107: FARMBots
+  Stored team info for frc11130: Totally Clucked Robotics
+  Stored team info for frc11174: Danes Robotics
+  Stored team info for frc11176: RoboRabbits
+  Stored team info for frc11200: Panther Prime
+  Stored team info for frc11220: The Royal Guard
+  Stored team info for frc11225: Wolfimus
+  Stored team info for frc11227: Goose Goose Duck
+  Stored team info for frc11260: Ursuline Robotics
+  Stored team info for frc11265: Rockbotics -FRC
+  Stored team info for frc11276: Kenner BruhBots
+  Stored team info for frc11277: ARC
+  Stored team info for frc11287: Canton Rising Stars
+  Stored team info for frc11342: StingVille Robotics Team
+  Stored team info for frc11343: SoulCity Circuits (JPS Robotics)
+  Stored team info for frc11345: Long Beach RoboBearcats
+  Stored team info for frc11366: Red Devil's Redemption
+  Stored team info for frc11379: TURTLESS
+  Stored team info for frc11428: Horns of Steel
+  Stored team info for frc11429: NEW AI
+  Stored team info for frc11469: Ignis Mechanica
+  Stored team info for frc11479: Formosa Robotics
+  Stored team info for frc1165: Team Paradise
+  Stored team info for frc1168: Malvern Robotics
+  Stored team info for frc1212: Sentinels
+  Stored team info for frc1255: Blarglefish
+  Stored team info for frc1257: Parallel Universe
+  Stored team info for frc1279: Cold Fusion
+  Stored team info for frc1305: Ice Cubed
+  Stored team info for frc1334: OT Devils
+  Stored team info for frc1339: Angelbotics
+  Stored team info for frc135: Penn Robotics Black Knights
+  Stored team info for frc1360: Orbit Robotics
+  Stored team info for frc1410: The Kraken
+  Stored team info for frc1414: IHOT
+  Stored team info for frc1421: Team CHAOS
+  Stored team info for frc1555: CryoFrost
+  Stored team info for frc1566: AMMOKNIGHTS
+  Stored team info for frc1569: Haywire Robotics
+  Stored team info for frc159: Alpine Robotics
+  Stored team info for frc1626: Falcon Robotics
+  Stored team info for frc1647: Iron Devils
+  Stored team info for frc1672: Robo T-Birds
+  Stored team info for frc1683: Techno Titans
+  Stored team info for frc1708: AMP'D Robotics
+  Stored team info for frc1712: Dawgma
+  Stored team info for frc1746: Team OTTO
+  Stored team info for frc1747: Harrison Boiler Robotics
+  Stored team info for frc1811: FRESH
+  Stored team info for frc1818: Team Talos
+  Stored team info for frc1828: BoxerBots
+  Stored team info for frc1891: Bullbots
+  Stored team info for frc1923: The MidKnight Inventors
+  Stored team info for frc1927: Tempest
+  Stored team info for frc193: MORT Beta
+  Stored team info for frc1977: The PowerSquids
+  Stored team info for frc2013: Cybergnomes
+  Stored team info for frc2016: Mighty Monkey Wrenches
+  Stored team info for frc203: SOUPERBOTS
+  Stored team info for frc204: Eastern Robotic Vikings
+  Stored team info for frc2080: Torbotics
+  Stored team info for frc2083: Team Blitz
+  Stored team info for frc2095: Direct Current
+  Stored team info for frc2171: RoboDogs
+  Stored team info for frc2180: Zero Gravity
+  Stored team info for frc2183: Tigerbots
+  Stored team info for frc219: Team Impact
+  Stored team info for frc2191: Flux Core
+  Stored team info for frc222: Tigertrons
+  Stored team info for frc2221: FHS Robodawgs
+  Stored team info for frc223: Xtreme Heat
+  Stored team info for frc2234: Alternating Current
+  Stored team info for frc2240: Brute Force
+  Stored team info for frc234: Cyber Blue
+  Stored team info for frc2386: Trojans
+  Stored team info for frc244: RoboDawgs 3D
+  Stored team info for frc2458: Team Chaos
+  Stored team info for frc2478: Westwood Robotics
+  Stored team info for frc2495: Hive Mind
+  Stored team info for frc25: Raider Robotix
+  Stored team info for frc2554: The Warhawks
+  Stored team info for frc2559: Normality Zero
+  Stored team info for frc2587: DiscoBots
+  Stored team info for frc2594: Naskcorpions
+  Stored team info for frc2609: Beaverworx
+  Stored team info for frc2662: RoboKrew
+  Stored team info for frc2687: Team Apprentice
+  Stored team info for frc2689: Team Alpha
+  Stored team info for frc2706: Merge Robotics
+  Stored team info for frc2708: Lake Effect Robotics
+  Stored team info for frc2714: ♨️ BBQ ♨️
+  Stored team info for frc2720: Red Watch Robotics
+  Stored team info for frc2722: Charge Robotics
+  Stored team info for frc2726: Red Pebble Rebels
+  Stored team info for frc2728: ♨️ TACO ♨️
+  Stored team info for frc2789: TEXPLOSION
+  Stored team info for frc2840: PCDS Blue Tide
+  Stored team info for frc2867: ElkLogics
+  Stored team info for frc288: The RoboDawgs
+  Stored team info for frc292: PantherTech
+  Stored team info for frc293: SPIKE
+  Stored team info for frc2935: NACI Robotics
+  Stored team info for frc2945: Steel Mustangs
+  Stored team info for frc2950: Devastators
+  Stored team info for frc2969: Aftermath
+  Stored team info for frc2972: Gears and Buccaneers
+  Stored team info for frc3009: High Scalers
+  Stored team info for frc3019: Firebirds
+  Stored team info for frc3039: Wildcat Robotics
+  Stored team info for frc3091: 100 Scholars
+  Stored team info for frc3132: Thunder Down Under
+  Stored team info for frc3142: Aperture
+  Stored team info for frc3147: Munster Horsepower
+  Stored team info for frc3161: Tronic Titans
+  Stored team info for frc3166: Rooks
+  Stored team info for frc3176: Purple Precision
+  Stored team info for frc3216: MRT
+  Stored team info for frc324: Chips
+  Stored team info for frc3240: Team Orion
+  Stored team info for frc328: Penn Robotics Golden Rooks
+  Stored team info for frc3282: Dallas Robo Tigers
+  Stored team info for frc3288: Punchers
+  Stored team info for frc3329: Wildbots
+  Stored team info for frc3340: Union City EagleX Robotics
+  Stored team info for frc3344: Space Dragons
+  Stored team info for frc3424: Corax
+  Stored team info for frc3468: MAGNAtech Rebels
+  Stored team info for frc3481: Bronc Botz
+  Stored team info for frc3487: Red Pride Robotics
+  Stored team info for frc3543: C4 Robotics
+  Stored team info for frc3559: Thundercats
+  Stored team info for frc3560: MechaWolves
+  Stored team info for frc3606: BearMetal
+  Stored team info for frc3616: Team Phenomena
+  Stored team info for frc3635: Flying Legion
+  Stored team info for frc3648: Sparta Robotica
+  Stored team info for frc365: Miracle Workerz
+  Stored team info for frc3676: RedShift Robotics
+  Stored team info for frc3679: rattlers
+  Stored team info for frc3735: VorTX
+  Stored team info for frc3756: RamFerno
+  Stored team info for frc3807: Overland BlazerBots
+  Stored team info for frc3815: NF Raiders
+  Stored team info for frc3824: HVA RoHAWKtics
+  Stored team info for frc3865: Riley WildBots
+  Stored team info for frc3940: CyberTooth
+  Stored team info for frc3944: All Knights
+  Stored team info for frc4026: Decatur Robotics
+  Stored team info for frc4068: Bearbotics
+  Stored team info for frc4069: Lo-Ellen Robotics
+  Stored team info for frc41: RoboWarriors
+  Stored team info for frc4107: Team Storm
+  Stored team info for frc4112: EagleBots
+  Stored team info for frc4146: Sabercats
+  Stored team info for frc4152: Hoya Robotics
+  Stored team info for frc4175: Coded Summit
+  Stored team info for frc418: Purple Haze
+  Stored team info for frc4183: Bit Buckets
+  Stored team info for frc423: Simple Machines
+  Stored team info for frc4240: TroTek Warriors
+  Stored team info for frc427: LANCE-A-LOT
+  Stored team info for frc428: BoroBlasters
+  Stored team info for frc4285: Camo-Bots
+  Stored team info for frc4293: Komodo
+  Stored team info for frc4295: Hudson Stingers
+  Stored team info for frc430: MORT GAMMA
+  Stored team info for frc4308: ABSOLUTE ROBOTICS
+  Stored team info for frc433: Firebirds
+  Stored team info for frc4336: Ramageddon Robotics
+  Stored team info for frc4342: Demon Robotics
+  Stored team info for frc436: Purple Rain
+  Stored team info for frc4361: Roxbotix
+  Stored team info for frc4364: Metal Jackets
+  Stored team info for frc4388: Ridgebotics
+  Stored team info for frc4418: IMPULSE
+  Stored team info for frc447: Team Roboto
+  Stored team info for frc4485: Tribe Tech Robotics
+  Stored team info for frc45: TechnoKats Robotics Team
+  Stored team info for frc4509: Mechanical Bulls
+  Stored team info for frc4550: Something's Bruin
+  Stored team info for frc456: Siege Robotics
+  Stored team info for frc4573: Rambotics
+  Stored team info for frc4575: Gemini
+  Stored team info for frc4580: Conductors
+  Stored team info for frc4585: Husky Robotics
+  Stored team info for frc4598: ICARUS INNOVATED
+  Stored team info for frc461: Westside Boiler Invasion
+  Stored team info for frc4610: BearTecs
+  Stored team info for frc4637: BambieBotz
+  Stored team info for frc4638: Jagbots
+  Stored team info for frc4652: Ironmen 2
+  Stored team info for frc4653: Ironmen Robotics
+  Stored team info for frc4701: Warriors (Team W.I.R.E.)
+  Stored team info for frc4729: EMU Robotics
+  Stored team info for frc4730: Terminators
+  Stored team info for frc4731: MONARCH-E
+  Stored team info for frc4734: The Iron Plainsmen
+  Stored team info for frc4739: Normanhurst Nitro
+  Stored team info for frc4750: Bert
+  Stored team info for frc4774: The Drop Bears
+  Stored team info for frc4788: Can't Control
+  Stored team info for frc486: Positronic Panthers
+  Stored team info for frc4920: Belle River Boltheads
+  Stored team info for frc4926: GalacTech
+  Stored team info for frc4944: The Hi Fives
+  Stored team info for frc4976: Revolt Robotics
+  Stored team info for frc4982: Olympus Robotics
+  Stored team info for frc501: The PowerKnights
+  Stored team info for frc5024: Raider Robotics
+  Stored team info for frc5032: The Falcons
+  Stored team info for frc5036: The Robo Devils
+  Stored team info for frc5045: SpartaBot
+  Stored team info for frc5071: Charger Robotics
+  Stored team info for frc5074: RoboMustangs
+  Stored team info for frc5103: MECH&Cheese
+  Stored team info for frc5109: Gladiator Robotics
+  Stored team info for frc5113: Combustible Lemons
+  Stored team info for frc5188: Area 5188: Classified Robotics
+  Stored team info for frc5219: TeknoSquad 5219
+  Stored team info for frc5261: Cyber Shock
+  Stored team info for frc5331: Lightning Bots
+  Stored team info for frc538: Renaissance Robotics
+  Stored team info for frc5401: Fightin' Robotic Owls
+  Stored team info for frc5402: Wreckless Robotics
+  Stored team info for frc5407: Wolfpack Robotics
+  Stored team info for frc5409: Chargers
+  Stored team info for frc5417: Eagle Robotics
+  Stored team info for frc5438: Technological Terrors
+  Stored team info for frc5484: Career Academy Robotics - Wolf Pack
+  Stored team info for frc5490: The Dark Byte
+  Stored team info for frc5493: SMAbotics
+  Stored team info for frc5503: Smithville Tiger Trons
+  Stored team info for frc555: Montclair Robotics
+  Stored team info for frc5584: ICRobotics
+  Stored team info for frc5596: Wolverine Robotics
+  Stored team info for frc56: R.O.B.B.E.
+  Stored team info for frc5608: Lassiter Robotics
+  Stored team info for frc5613: ThunderDogs
+  Stored team info for frc5624: TIGER TECH Robotics
+  Stored team info for frc5648: Melbourne RoboCats 5648
+  Stored team info for frc5672: First Nations-STEM
+  Stored team info for frc5682: Equus Engineering
+  Stored team info for frc5684: Titans of Tech
+  Stored team info for frc5689: CK Cyber Pack
+  Stored team info for frc5732: ROBOTIGERS
+  Stored team info for frc5788: Eagle Spec Ops
+  Stored team info for frc5789: The Other Owls
+  Stored team info for frc5828: Flying Riots
+  Stored team info for frc5863: Hypercubed
+  Stored team info for frc5866: Fe [Iron] Tigers
+  Stored team info for frc5870: League of Logic
+  Stored team info for frc5876: ARTEMIS
+  Stored team info for frc5887: PrepaTec IMPERATOR
+  Stored team info for frc5892: Energy HEROs
+  Stored team info for frc590: Chahta Warriors
+  Stored team info for frc5900: The Fighting Mongooses
+  Stored team info for frc5933: JudgeMent Call Robotics
+  Stored team info for frc5965: Power Struck Girls
+  Stored team info for frc5986: ┌ Iron Fangs ┐
+  Stored team info for frc5988: Narooma High RoboRebels
+  Stored team info for frc5992: Pirates
+  Stored team info for frc60: Kingman FIRST Robotics Team 60 (The Bionic Bulldogs)
+  Stored team info for frc6016: Tiger Robotics
+  Stored team info for frc6023: DISCBOTS
+  Stored team info for frc6068: Delta Overload
+  Stored team info for frc6083: Overlooking
+  Stored team info for frc610: Crescent Coyotes
+  Stored team info for frc6135: Arctos
+  Stored team info for frc6171: ⚛ Chain Reaction ⚛
+  Stored team info for frc6184: C4 (Capital City Chaotic Coders)
+  Stored team info for frc6226: Blue Devils
+  Stored team info for frc6340: The Marist Manatees
+  Stored team info for frc6358: The Buhlean Operators
+  Stored team info for frc6377: Howdy Bots
+  Stored team info for frc6432: Valkyries
+  Stored team info for frc6434: Bossley Park High School Wolfgang
+  Stored team info for frc6476: Supernova Star Squad
+  Stored team info for frc6479: AZTECH Robotics
+  Stored team info for frc6489: Bronco Bolts
+  Stored team info for frc6498: Castle Robotics
+  Stored team info for frc6508: Hastings Heroes
+  Stored team info for frc6526: Cyber Rangers
+  Stored team info for frc662: Rocky Mountain Robotics
+  Stored team info for frc6672: Fusion Corps
+  Stored team info for frc6705: Wildcat5e
+  Stored team info for frc6712: Mountaineers
+  Stored team info for frc6721: Tindley Trailblazers
+  Stored team info for frc6772: The Marist Manta Rays
+  Stored team info for frc6808: William Tennent Robotics
+  Stored team info for frc6833: Python Robotics
+  Stored team info for frc6859: Big Metal Lakers 6859- BML Robotics
+  Stored team info for frc6860: Equitum Robotics
+  Stored team info for frc6864: GryphTech Robotics
+  Stored team info for frc6875: Amazon Warriors Robotics
+  Stored team info for frc6887: Dalton Catabots
+  Stored team info for frc6897: Astraea Robotics
+  Stored team info for frc6901: Knights Robotics
+  Stored team info for frc6905: Raiders of the ARC- TEAR-A-BYTE
+  Stored team info for frc6910: Mill Creek Steel Talons
+  Stored team info for frc6921: Technados
+  Stored team info for frc6945: Children of the Corn
+  Stored team info for frc6956: SHAM-ROCK-BOTICS ☘
+  Stored team info for frc6975: The Neil McNeil Brotherhood Bots
+  Stored team info for frc698: Hamilton Microbots
+  Stored team info for frc6996: Koalafied
+  Stored team info for frc7045: MCCrusaders
+  Stored team info for frc7072: O.G.R.E. (Opelika's Greatest Robotics Engineers)
+  Stored team info for frc708: Hatters Robotics
+  Stored team info for frc709: Femme Tech Fatale
+  Stored team info for frc7094: Alpha Omega
+  Stored team info for frc71: Team Hammond
+  Stored team info for frc7104: The Bot Brothers
+  Stored team info for frc7110: Heights Bytes
+  Stored team info for frc7113: Control Rising
+  Stored team info for frc7125: Tigerbotics
+  Stored team info for frc7128: XLR8
+  Stored team info for frc714: Panthera
+  Stored team info for frc7163: A.I. Metal Pies
+  Stored team info for frc7183: W.A.R.
+  Stored team info for frc7198: Fearsome Gears
+  Stored team info for frc7200: Banting Robotics
+  Stored team info for frc7271: Hangar 84
+  Stored team info for frc7288: NOMMA D3V1LB0TS
+  Stored team info for frc7333: Ghost
+  Stored team info for frc7414: Retrobotics
+  Stored team info for frc7425: Green Valley Robotics
+  Stored team info for frc7433: Iona Fusion
+  Stored team info for frc7436: 8-Bit Miners
+  Stored team info for frc7474: JXN United
+  Stored team info for frc7476: Spongebotics
+  Stored team info for frc7477: Giddy GOATS
+  Stored team info for frc7480: Machine Mavericks
+  Stored team info for frc7485: Mo Co Robo
+  Stored team info for frc7492: Turbo Torque
+  Stored team info for frc75: RoboRaiders
+  Stored team info for frc7503: Radicubs
+  Stored team info for frc7506: WILDCARDS
+  Stored team info for frc7514: EVE Robotics
+  Stored team info for frc752: Chargers
+  Stored team info for frc7538: Metal Mountain
+  Stored team info for frc7583: Embers
+  Stored team info for frc7587: Metuchen Momentum
+  Stored team info for frc7603: 7603 VESPA ROBOTICS
+  Stored team info for frc7617: RoboBlazers
+  Stored team info for frc7634: New Hawks
+  Stored team info for frc7657: Thunderbots
+  Stored team info for frc7659: HNMCS Robotics
+  Stored team info for frc7676: THS RoboDogs
+  Stored team info for frc7691: TSA All Stars
+  Stored team info for frc7695: Trojan Thunder
+  Stored team info for frc7755: Phantom Circuits
+  Stored team info for frc7757: Atomic Dishwashers
+  Stored team info for frc781: Kinetic Knights
+  Stored team info for frc7895: Trobots
+  Stored team info for frc7902: Markham FireBirds
+  Stored team info for frc7906: Underdogs
+  Stored team info for frc8012: APEX Robotics
+  Stored team info for frc8075: CyberTigers
+  Stored team info for frc8080: Sequoyah High School Robotics
+  Stored team info for frc8088: Bionic Panthers
+  Stored team info for frc8089: Rockway Robotics
+  Stored team info for frc8100: Grayson Robotics
+  Stored team info for frc8103: Knight Robotics
+  Stored team info for frc8116: Hatchet Robotics
+  Stored team info for frc8117: Easton RoboRovers
+  Stored team info for frc8130: Absegami Robotics
+  Stored team info for frc816: Anomaly
+  Stored team info for frc829: The Digital Goats
+  Stored team info for frc832: OSCAR
+  Stored team info for frc8334: Titan Robotics
+  Stored team info for frc834: SparTechs
+  Stored team info for frc8349: Newbotics
+  Stored team info for frc8370: Glow With The Flow
+  Stored team info for frc8430: The Hatch Batch
+  Stored team info for frc8431: Robo-Knights
+  Stored team info for frc8432: Cyber Knights
+  Stored team info for frc8507: Jagwire Robotics
+  Stored team info for frc8528: AstroChimps
+  Stored team info for frc8577: Georgia Cyber Academy Champions
+  Stored team info for frc8588: Tech Devils
+  Stored team info for frc862: Lightning Robotics
+  Stored team info for frc8630: CAP ROBOTICS
+  Stored team info for frc865: WARP7
+  Stored team info for frc87: Diablo
+  Stored team info for frc8704: Void Warranty
+  Stored team info for frc8706: MXS Bulldog Bots
+  Stored team info for frc8707: The Newark Circuit Breakers
+  Stored team info for frc8714: Robo Griffins'
+  Stored team info for frc8717: Cyber Vipers
+  Stored team info for frc8721: Code Name M.I.T.
+  Stored team info for frc8729: Sparkling H2O
+  Stored team info for frc8736: The Mechanisms
+  Stored team info for frc8742: Argyll Attack
+  Stored team info for frc8761: AHS TigerByte8761
+  Stored team info for frc8769: G.O.R.T.s
+  Stored team info for frc8771: PioTech
+  Stored team info for frc8805: NKST36
+  Stored team info for frc8839: Shoshone Robotics
+  Stored team info for frc8844: Flamethrowers
+  Stored team info for frc8849: Storm Robotics
+  Stored team info for frc8866: Innovation Robotics
+  Stored team info for frc8885: Socratic Schematics
+  Stored team info for frc9014: Vulcan Mechanics
+  Stored team info for frc9015: Questionable Engineering
+  Stored team info for frc9027: PATH to Domination
+  Stored team info for frc9037: HHS Black Ops
+  Stored team info for frc9059: COLTech Robotics
+  Stored team info for frc9071: SlicerTech
+  Stored team info for frc9080: ENIGMA
+  Stored team info for frc9091: A.W.E.
+  Stored team info for frc9100: Robo Roses
+  Stored team info for frc9116: The Canucks & Bolts
+  Stored team info for frc9119: Iron Legends
+  Stored team info for frc9121: Mavericks
+  Stored team info for frc9134: Tecmilenio - DEVOLT
+  Stored team info for frc9138: Robo Hawks
+  Stored team info for frc9146: Burnouts
+  Stored team info for frc9147: The Joebots
+  Stored team info for frc9153: Bearcat Robotics
+  Stored team info for frc9189: Disastrous Data
+  Stored team info for frc919: PANTHERA TIGRIS
+  Stored team info for frc9191: My Chemical Robots
+  Stored team info for frc9262: Humberside Huskies
+  Stored team info for frc9263: ALD Lions
+  Stored team info for frc9309: Metal Mages
+  Stored team info for frc9313: ROBOhana
+  Stored team info for frc9405: RouxBots
+  Stored team info for frc9416: International Θperatives of World Affairs
+  Stored team info for frc9418: Pastabots
+  Stored team info for frc9424: E.O. JAG BOTS
+  Stored team info for frc9431: Snider Panthers- "The Gold Standard"
+  Stored team info for frc9433: Lil' Timmy's Big Team
+  Stored team info for frc9439: Knights of Polaris
+  Stored team info for frc9444: Perseverance
+  Stored team info for frc9456: Nunez Robotics
+  Stored team info for frc9477: Lambda (λ)
+  Stored team info for frc9480: The Gear Bears
+  Stored team info for frc9491: Crypto Creek
+  Stored team info for frc9492: LadyTalons
+  Stored team info for frc9501: Sidereal Envoy
+  Stored team info for frc9503: EF5 CHAOS
+  Stored team info for frc9506: Conspiracy Robotics
+  Stored team info for frc9522: Archimedes
+  Stored team info for frc9530: John Adams Robotics
+  Stored team info for frc9534: Wolves Robotics (Basic HS)
+  Stored team info for frc9562: Royal Robotics
+  Stored team info for frc9569: Milliken Mills Silver Knights
+  Stored team info for frc9574: Rock Bots
+  Stored team info for frc9575: Silver Robotics
+  Stored team info for frc9577: Recoil
+  Stored team info for frc9580: Grizzly Gears
+  Stored team info for frc9586: Denbot
+  Stored team info for frc9589: Arcade Robotics
+  Stored team info for frc9659: Vanier Vikings
+  Stored team info for frc9660: Delgado Community College Dolphinbots
+  Stored team info for frc9699: Bayou Crusaders
+  Stored team info for frc9704: IgKnighted
+  Stored team info for frc9708: Supersonic Circuit Breakers
+  Stored team info for frc9717: Poultronix
+  Stored team info for frc9726: Notus Pirates
+  Stored team info for frc9734: Jasper County Devil Dogs
+  Stored team info for frc9761: LSMSA Robotics
+  Stored team info for frc9768: ROBOKNIGHTS
+  Stored team info for frc9770: Victory Church of Christ Robo Knights
+  Stored team info for frc9777: Knights of the Lab Table
+  Stored team info for frc9786: MHS Wolfpack Team 9786
+  Stored team info for frc9787: Fathom Robotics
+  Stored team info for frc9790: Crypto Creek II
+  Stored team info for frc991: BroncoBots
+  Stored team info for frc996: Mecha Knights
 
 Fetching district rankings...
   Stored 143 district rankings.
 
 Fetching qualifier event matches...
   9 qualifier events found
-  2026njfla: fetching from TBA...
-Done 2026njfla. Inserted 81 matches, skipped 0 duplicates -> matches.db
-    Inserted 81 matches
-  2026njrob: fetching from TBA...
-Done 2026njrob. Inserted 73 matches, skipped 0 duplicates -> matches.db
-    Inserted 73 matches
-  2026njski: fetching from TBA...
-Done 2026njski. Inserted 83 matches, skipped 0 duplicates -> matches.db
-    Inserted 83 matches
-  2026njtab: fetching from TBA...
-Done 2026njtab. Inserted 79 matches, skipped 0 duplicates -> matches.db
-    Inserted 79 matches
-  2026njwas: fetching from TBA...
-Done 2026njwas. Inserted 75 matches, skipped 0 duplicates -> matches.db
-    Inserted 75 matches
-  2026paben: fetching from TBA...
-Done 2026paben. Inserted 84 matches, skipped 0 duplicates -> matches.db
-    Inserted 84 matches
-  2026pahat: fetching from TBA...
-Done 2026pahat. Inserted 81 matches, skipped 0 duplicates -> matches.db
-    Inserted 81 matches
-  2026paphi: fetching from TBA...
-Done 2026paphi. Inserted 77 matches, skipped 0 duplicates -> matches.db
-    Inserted 77 matches
-  2026pawar: fetching from TBA...
-Done 2026pawar. Inserted 81 matches, skipped 0 duplicates -> matches.db
-    Inserted 81 matches
+  2026njfla: 81 matches already in DB — skipping
+  2026njrob: 73 matches already in DB — skipping
+  2026njski: 83 matches already in DB — skipping
+  2026njtab: 79 matches already in DB — skipping
+  2026njwas: 75 matches already in DB — skipping
+  2026paben: 84 matches already in DB — skipping
+  2026pahat: 81 matches already in DB — skipping
+  2026paphi: 77 matches already in DB — skipping
+  2026pawar: 81 matches already in DB — skipping
 
 Fetching 2026cmptx team qualifier history...
-  593 teams total, 568 need qualifier data fetched
-    ... 1/568 team
-    ... 2/568 team
-    ... 3/568 team
-    ... 4/568 team
+  593 teams total, 460 need qualifier data fetched
+    ... 1/460 team
+    ... 2/460 team
+    ... 3/460 team
+    ... 4/460 team
     Reached 5 teams needing fetch, stopping to avoid excessive TBA requests
-  Fetching 12 new qualifier events...
-  2026ausc: fetching...
-Done 2026ausc. Inserted 85 matches, skipped 0 duplicates -> matches.db
-    85 matches inserted
+  Fetching 9 new qualifier events...
   2026cmptx: fetching...
     No matches yet for 2026cmptx
-  2026gaalb: fetching...
-Done 2026gaalb. Inserted 71 matches, skipped 0 duplicates -> matches.db
-    71 matches inserted
-  2026gacmp: fetching...
-Done 2026gacmp. Inserted 105 matches, skipped 0 duplicates -> matches.db
-    105 matches inserted
-  2026gadal: fetching...
-Done 2026gadal. Inserted 77 matches, skipped 0 duplicates -> matches.db
-    77 matches inserted
-  2026oncmp: fetching...
-Done 2026oncmp. Inserted 2 matches, skipped 0 duplicates -> matches.db
-    2 matches inserted
-  2026oncmp1: fetching...
-Done 2026oncmp1. Inserted 115 matches, skipped 0 duplicates -> matches.db
-    115 matches inserted
-  2026onnob: fetching...
-Done 2026onnob. Inserted 65 matches, skipped 0 duplicates -> matches.db
-    65 matches inserted
-  2026onosh: fetching...
-Done 2026onosh. Inserted 71 matches, skipped 0 duplicates -> matches.db
-    71 matches inserted
-  2026txbel: fetching...
-Done 2026txbel. Inserted 81 matches, skipped 0 duplicates -> matches.db
+  2026cnsh: fetching...
+Done 2026cnsh. Inserted 74 matches, skipped 0 duplicates -> matches.db
+    74 matches inserted
+  2026flta: fetching...
+Done 2026flta. Inserted 83 matches, skipped 0 duplicates -> matches.db
+    83 matches inserted
+  2026nysu: fetching...
+Done 2026nysu. Inserted 95 matches, skipped 0 duplicates -> matches.db
+    95 matches inserted
+  2026ohcl: fetching...
+Done 2026ohcl. Inserted 92 matches, skipped 0 duplicates -> matches.db
+    92 matches inserted
+  2026ohmv: fetching...
+Done 2026ohmv. Inserted 91 matches, skipped 0 duplicates -> matches.db
+    91 matches inserted
+  2026tuis2: fetching...
+Done 2026tuis2. Inserted 81 matches, skipped 0 duplicates -> matches.db
     81 matches inserted
-  2026txcmp1: fetching...
-Done 2026txcmp1. Inserted 105 matches, skipped 0 duplicates -> matches.db
-    105 matches inserted
-  2026txwac: fetching...
-Done 2026txwac. Inserted 65 matches, skipped 0 duplicates -> matches.db
-    65 matches inserted
-[2026-04-22 16:30:01] Matches in DB after import: 1556 total, 1556 completed
-[2026-04-22 16:30:01] Running create_view.py...
+  2026tuis3: fetching...
+Done 2026tuis3. Inserted 81 matches, skipped 0 duplicates -> matches.db
+    81 matches inserted
+  2026tuis5: fetching...
+Done 2026tuis5. Inserted 75 matches, skipped 0 duplicates -> matches.db
+    75 matches inserted
+[2026-04-22 17:00:01] Matches in DB after import: 2930 total, 2930 completed
+[2026-04-22 17:00:01] Running create_view.py...
 Loading data from matches.db...
-  404 teams, 1556 matches  →  Region Wide.html
-  82 teams, 1222 matches  →  team_history.html
+  973 teams, 2930 matches  →  Region Wide.html
+  190 teams, 2345 matches  →  team_history.html
   593 teams (upcoming)  →  2026cmptx.html
   district_points.html  →  143 teams
   index.html  →  4 pages listed
 Done. Generated 3 file(s).
-[2026-04-22 16:30:01] Staging changes...
+[2026-04-22 17:00:01] Staging changes...
