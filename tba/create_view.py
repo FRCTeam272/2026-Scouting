@@ -1,5 +1,5 @@
 """
-Generate a dark-themed HTML dashboard (Region Wide.html) from matches.db.
+Generate a dark-themed HTML dashboard (Worlds.html) from matches.db.
 
 Shows:
   • Overview  — tower-usage leaderboard, top alliance scores, RP/achievement rates
@@ -51,7 +51,8 @@ DB_PATH = "matches.db"
 # ── Query helpers ─────────────────────────────────────────────────────────────
 
 def load_data(db_path: str, event_prefix: str | None = None,
-              team_filter_event: str | None = None) -> dict:
+              team_filter_event: str | None = None,
+              cmp_only: bool = False) -> dict:
     con = sqlite3.connect(db_path)
     con.row_factory = sqlite3.Row
 
@@ -80,6 +81,22 @@ def load_data(db_path: str, event_prefix: str | None = None,
             GROUP BY at.team_key
             ORDER BY CAST(SUBSTR(at.team_key, 4) AS INTEGER)
         """, (team_filter_event, ep) if ep else (team_filter_event,)).fetchall()
+    elif cmp_only:
+        _cmp = sorted(CHAMPIONSHIP_EVENTS)
+        _ph = ",".join("?" * len(_cmp))
+        team_rows = con.execute(f"""
+            SELECT at.team_key, COUNT(*) AS played
+            FROM alliance_teams at
+            WHERE at.team_key IN (
+                SELECT team_key FROM event_teams WHERE event_key IN ({_ph})
+                UNION
+                SELECT DISTINCT at2.team_key FROM alliance_teams at2
+                JOIN matches m ON at2.match_key = m.key
+                WHERE m.event_key IN ({_ph})
+            ) {"AND substr(at.match_key,1,8)=?" if ep else ""}
+            GROUP BY at.team_key
+            ORDER BY CAST(SUBSTR(at.team_key, 4) AS INTEGER)
+        """, (*_cmp, *_cmp, ep) if ep else (*_cmp, *_cmp)).fetchall()
     else:
         team_rows = con.execute(f"""
             SELECT team_key, COUNT(*) AS played
@@ -379,7 +396,7 @@ def load_data(db_path: str, event_prefix: str | None = None,
 
         bracket = {"rounds": rounds_data, "finals": final_matches}
 
-    if team_filter_event:
+    if team_filter_event or cmp_only:
         _fkeys = {r["team_key"] for r in team_rows}
         _fmatches = {mk for (mk, _, tk) in team_pos if tk in _fkeys}
         _total_matches = len(_fmatches)
@@ -1100,7 +1117,7 @@ function loadTeam(key) {
 
   const pageMatches = t.match_history.map(m => ({
     ...m,
-    is_historic: PAGE_ID !== 'history' && HAS_CHAMP_DATA && (PAGE_ID === 'region'
+    is_historic: PAGE_ID !== 'history' && HAS_CHAMP_DATA && (PAGE_ID === 'worlds'
       ? !CHAMPIONSHIP_EVENTS_JS.has(m.event)
       : !m.event.startsWith(PAGE_ID))
   }));
@@ -1196,7 +1213,7 @@ function loadTeam(key) {
         <th style="text-align:left;padding:7px 12px;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);">Link</th>
       </tr></thead>
       <tbody>
-        ${(PAGE_ID !== 'region' && PAGE_ID !== 'history' ? [{ep:'region', name:'Region Wide', fname:'Region Wide.html', current:false}] : [])
+        ${(PAGE_ID !== 'worlds' && PAGE_ID !== 'history' ? [{ep:'worlds', name:'Worlds', fname:'Worlds.html', current:false}] : [])
           .concat(t.events.map(ep => ({
             ep,
             name: EVENT_NAMES_JS[ep] || EVENT_NAMES_JS[ep.slice(0,8)] || ep,
@@ -1586,8 +1603,8 @@ if (localStorage.getItem('tba_hide_climb') === '1') {
     if (_histBtn) { _histBtn.textContent = 'Hide History'; _histBtn.classList.add('active'); }
   }
 }
-// Event filter dropdown (region-wide and history pages)
-if (PAGE_ID === 'region' || PAGE_ID === 'history') {
+// Event filter dropdown (worlds and history pages)
+if (PAGE_ID === 'worlds' || PAGE_ID === 'history') {
   const _evSel = document.getElementById('filter-event');
   if (_evSel) {
     const _evSet = new Set();
@@ -1622,13 +1639,13 @@ restoreNav() || showOverview();
 """
 
 
-def build_html(data: dict, title: str, timestamp: str, page_id: str = "region") -> str:
+def build_html(data: dict, title: str, timestamp: str, page_id: str = "worlds") -> str:
     embedded = json.dumps(data, separators=(",", ":"))
     event_names_js = json.dumps(EVENT_NAMES, separators=(",", ":"))
     championship_events_js = json.dumps(sorted(CHAMPIONSHIP_EVENTS), separators=(",", ":"))
     event_filter_html = (
         '<select id="filter-event" title="Filter by event"><option value="">All events</option></select>'
-        if page_id in ("region", "history") else ""
+        if page_id in ("worlds", "history") else ""
     )
     return (HTML_TEMPLATE
             .replace("__DATA__", embedded)
@@ -1641,10 +1658,11 @@ def build_html(data: dict, title: str, timestamp: str, page_id: str = "region") 
 
 
 def write_view(event_prefix: str | None, out_path: str, title: str, timestamp: str,
-               page_id: str | None = None, team_filter_event: str | None = None) -> None:
-    data = load_data(DB_PATH, event_prefix, team_filter_event=team_filter_event)
+               page_id: str | None = None, team_filter_event: str | None = None,
+               cmp_only: bool = False) -> None:
+    data = load_data(DB_PATH, event_prefix, team_filter_event=team_filter_event, cmp_only=cmp_only)
     print(f"  {data['overview']['total_teams']} teams, {data['overview']['total_matches']} matches  →  {out_path}")
-    effective_page_id = page_id or (event_prefix if event_prefix else "region")
+    effective_page_id = page_id or (event_prefix if event_prefix else "worlds")
     html = build_html(data, title, timestamp, effective_page_id)
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(html)
@@ -2113,9 +2131,9 @@ def main():
 
     pages = []
 
-    write_view(None, "Region Wide.html", "TBA 2026 — Region Wide", timestamp)
-    data_rw = load_data(DB_PATH)
-    pages.append(("Region Wide.html", "Region Wide",
+    write_view(None, "Worlds.html", "TBA 2026 — Worlds", timestamp, page_id="worlds", cmp_only=True)
+    data_rw = load_data(DB_PATH, cmp_only=True)
+    pages.append(("Worlds.html", "Worlds",
                   f"{data_rw['overview']['total_teams']} teams · {data_rw['overview']['total_matches']} matches"))
 
     write_view(None, "team_history.html", "TBA 2026 — Team History", timestamp,

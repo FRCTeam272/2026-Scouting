@@ -92,8 +92,8 @@ def _import_cmp_team_history(con: sqlite3.Connection, db_path: str, cmp_event_ke
     events_to_fetch: set[str] = set()
 
     for i, tk in enumerate(teams_needing_fetch, 1):
-        if i == 5:
-            print(f"    Reached 5 teams needing fetch, stopping to avoid excessive TBA requests")
+        if i == 25:
+            print(f"    Reached 25 teams needing fetch, stopping to avoid excessive TBA requests")
             break
         print(f"    ... {i}/{len(teams_needing_fetch)} team")
         try:

@@ -65,6 +65,7 @@ $PYTHON create_view.py
 
 # ── 3. Commit and push ───────────────────────────────────────────────────────
 log "Staging changes..."
+git add -u  # stage deletions of tracked files
 git add *.html update.log
 
 delta_total="$(printf "%+d" "$((after_count - before_count))")"
