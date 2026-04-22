@@ -26,6 +26,9 @@ EVENT_NAMES: dict[str, str] = {
 }
 
 
+CHAMPIONSHIP_EVENTS: set[str] = set(EVENT_NAMES.keys())
+
+
 def compute_opr(team_keys: list, alliance_teams: list, scores: list) -> dict:
     """Least-squares OPR.  Returns {team_key: opr_value | None}."""
     idx = {tk: i for i, tk in enumerate(team_keys)}
@@ -47,7 +50,8 @@ DB_PATH = "matches.db"
 
 # ── Query helpers ─────────────────────────────────────────────────────────────
 
-def load_data(db_path: str, event_prefix: str | None = None) -> dict:
+def load_data(db_path: str, event_prefix: str | None = None,
+              team_filter_event: str | None = None) -> dict:
     con = sqlite3.connect(db_path)
     con.row_factory = sqlite3.Row
 
@@ -65,13 +69,24 @@ def load_data(db_path: str, event_prefix: str | None = None) -> dict:
     """, args):
         team_pos[(row["match_key"], row["color"], row["team_key"])] = row["pos"]
 
-    # all teams and their match counts
-    team_rows = con.execute(f"""
-        SELECT team_key, COUNT(*) AS played
-        FROM alliance_teams {mk_filter}
-        GROUP BY team_key
-        ORDER BY CAST(SUBSTR(team_key, 4) AS INTEGER)
-    """, args).fetchall()
+    # all teams and their match counts — optionally restricted to a registration event
+    if team_filter_event:
+        team_rows = con.execute(f"""
+            SELECT at.team_key, COUNT(*) AS played
+            FROM alliance_teams at
+            WHERE at.team_key IN (
+                SELECT team_key FROM event_teams WHERE event_key = ?
+            ) {"AND substr(at.match_key,1,8)=?" if ep else ""}
+            GROUP BY at.team_key
+            ORDER BY CAST(SUBSTR(at.team_key, 4) AS INTEGER)
+        """, (team_filter_event, ep) if ep else (team_filter_event,)).fetchall()
+    else:
+        team_rows = con.execute(f"""
+            SELECT team_key, COUNT(*) AS played
+            FROM alliance_teams {mk_filter}
+            GROUP BY team_key
+            ORDER BY CAST(SUBSTR(team_key, 4) AS INTEGER)
+        """, args).fetchall()
 
     # score_breakdowns keyed by (match_key, color)
     breakdowns = {}
@@ -192,12 +207,13 @@ def load_data(db_path: str, event_prefix: str | None = None) -> dict:
             if used_auto or used_endgame:
                 tower_matches += 1
 
-            events_seen.add(meta.get("event_key", ""))
-
+            ev_key = meta.get("event_key", "")
+            events_seen.add(ev_key)
             match_history.append({
                 "match_key":    mk,
                 "sched_time":   meta.get("sched_time"),
-                "event":        meta.get("event_key", ""),
+                "event":        ev_key,
+                "is_historic":  ev_key not in CHAMPIONSHIP_EVENTS,
                 "comp_level":   meta.get("comp_level", ""),
                 "match_number": meta.get("match_number"),
                 "color":        color,
@@ -363,8 +379,15 @@ def load_data(db_path: str, event_prefix: str | None = None) -> dict:
 
         bracket = {"rounds": rounds_data, "finals": final_matches}
 
+    if team_filter_event:
+        _fkeys = {r["team_key"] for r in team_rows}
+        _fmatches = {mk for (mk, _, tk) in team_pos if tk in _fkeys}
+        _total_matches = len(_fmatches)
+    else:
+        _total_matches = len(match_meta)
+
     overview = {
-        "total_matches": len(match_meta),
+        "total_matches": _total_matches,
         "total_teams":   len(team_rows),
         "total_breakdowns": total_bd,
         "energized_rate":    round(energized_count    / total_bd, 4) if total_bd else 0,
@@ -449,6 +472,12 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     #toggle-climb:hover{border-color:var(--accent);color:var(--text);}
     #toggle-climb.active{border-color:var(--teal);color:var(--teal);background:rgba(79,197,207,.1);}
     body.hide-climb .climb-stat{display:none!important;}
+    #toggle-historic{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--muted);font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;}
+    #toggle-historic:hover{border-color:var(--accent);color:var(--text);}
+    #toggle-historic.active{border-color:#f5a623;color:#f5a623;background:rgba(245,166,35,.1);}
+    .historic-match{display:none;}
+    body.show-historic .historic-match{display:block;}
+    .historic-badge{font-size:.65rem;font-weight:700;color:var(--muted);background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.3);border-radius:3px;padding:1px 5px;letter-spacing:.04em;white-space:nowrap;}
 
     .layout{display:flex;flex:1;overflow:hidden;}
     aside{width:var(--sidebar-w);flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
@@ -643,6 +672,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   <input id="search" type="text" placeholder="Search team..."/>
   __EVENT_FILTER_HTML__
   <button id="toggle-climb" onclick="toggleClimb()" title="Show/hide climb stats">Hide Climb</button>
+  <button id="toggle-historic" onclick="toggleHistoric()" title="Show/hide qualifier history">Show History</button>
   <select id="sort-by" title="Sort teams by">
     <option value="tower">Tower usage</option>
     <option value="num" selected>Team number</option>
@@ -705,6 +735,8 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 const DATA = __DATA__;
 const PAGE_ID = '__PAGE_ID__';
 const EVENT_NAMES_JS = __EVENT_NAMES_JS__;
+const CHAMPIONSHIP_EVENTS_JS = new Set(__CHAMPIONSHIP_EVENTS_JS__);
+const HAS_CHAMP_DATA = DATA.teams.some(t => t.match_history.some(m => CHAMPIONSHIP_EVENTS_JS.has(m.event)));
 let filterEvent = localStorage.getItem('tba_filter_event') || '';
 
 const activeCharts = {};
@@ -1066,7 +1098,12 @@ function loadTeam(key) {
   closeSidebar();
   document.querySelector(`.team-item[data-key="${key}"]`)?.classList.add('active');
 
-  const pageMatches = PAGE_ID === 'region' ? t.match_history : t.match_history.filter(m => m.event.startsWith(PAGE_ID));
+  const pageMatches = t.match_history.map(m => ({
+    ...m,
+    is_historic: PAGE_ID !== 'history' && HAS_CHAMP_DATA && (PAGE_ID === 'region'
+      ? !CHAMPIONSHIP_EVENTS_JS.has(m.event)
+      : !m.event.startsWith(PAGE_ID))
+  }));
   const hasBreakdowns = pageMatches.some(m => m.auto_tower !== null || m.endgame_tower !== null);
   const hasHub = pageMatches.some(m => m.hub_total_pts !== null);
   const contribRanked = [...DATA.teams].filter(x => x.contrib_avg !== null)
@@ -1159,7 +1196,7 @@ function loadTeam(key) {
         <th style="text-align:left;padding:7px 12px;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);">Link</th>
       </tr></thead>
       <tbody>
-        ${(PAGE_ID !== 'region' ? [{ep:'region', name:'Region Wide', fname:'Region Wide.html', current:false}] : [])
+        ${(PAGE_ID !== 'region' && PAGE_ID !== 'history' ? [{ep:'region', name:'Region Wide', fname:'Region Wide.html', current:false}] : [])
           .concat(t.events.map(ep => ({
             ep,
             name: EVENT_NAMES_JS[ep] || EVENT_NAMES_JS[ep.slice(0,8)] || ep,
@@ -1181,8 +1218,9 @@ function loadTeam(key) {
         const resultCls  = m.won === true ? 'result-win' : m.won === false ? 'result-loss' : m.won === 'tie' ? 'result-tie' : 'result-tbd';
         const resultText = m.won === true ? 'WIN' : m.won === false ? 'LOSS' : m.won === 'tie' ? 'TIE' : 'TBD';
         const videoLink  = m.video_url ? `<a class="video-link" href="${m.video_url}" target="_blank">▶ Video</a>` : '';
-        return `<div class="match-card">
+        return `<div class="match-card${m.is_historic ? ' historic-match' : ''}">
           <div class="match-card-header">
+            ${m.is_historic ? `<span class="historic-badge">QUALIFIER</span>` : ''}
             <span class="match-label">${lbl}</span>
             <span class="match-color ${m.color}">${m.color.toUpperCase()}</span>
             <span class="${resultCls}">${resultText}</span>
@@ -1513,6 +1551,15 @@ function toggleClimb() {
   rebuildSidebar();
 }
 
+// ── Historic toggle ───────────────────────────────────────────────────────────
+function toggleHistoric() {
+  document.body.classList.toggle('show-historic');
+  const btn = document.getElementById('toggle-historic');
+  btn.textContent = document.body.classList.contains('show-historic') ? 'Hide History' : 'Show History';
+  btn.classList.toggle('active', document.body.classList.contains('show-historic'));
+  localStorage.setItem('tba_show_historic', document.body.classList.contains('show-historic') ? '1' : '');
+}
+
 // Boot
 document.getElementById('team-count').textContent = `${DATA.teams.length} teams`;
 const _schedUpcoming = (DATA.schedule || []).filter(m => !m.winner).length;
@@ -1528,8 +1575,19 @@ if (localStorage.getItem('tba_hide_climb') === '1') {
   _climbBtn.textContent = 'Show Climb';
   _climbBtn.classList.add('active');
 }
-// Event filter dropdown (region-wide page only)
-if (PAGE_ID === 'region') {
+// Restore historic toggle — only relevant when championship data exists
+{
+  const _hasChamp = HAS_CHAMP_DATA;
+  const _histBtn = document.getElementById('toggle-historic');
+  if (!_hasChamp || PAGE_ID === 'history') {
+    if (_histBtn) _histBtn.style.display = 'none';
+  } else if (localStorage.getItem('tba_show_historic') === '1') {
+    document.body.classList.add('show-historic');
+    if (_histBtn) { _histBtn.textContent = 'Hide History'; _histBtn.classList.add('active'); }
+  }
+}
+// Event filter dropdown (region-wide and history pages)
+if (PAGE_ID === 'region' || PAGE_ID === 'history') {
   const _evSel = document.getElementById('filter-event');
   if (_evSel) {
     const _evSet = new Set();
@@ -1567,9 +1625,10 @@ restoreNav() || showOverview();
 def build_html(data: dict, title: str, timestamp: str, page_id: str = "region") -> str:
     embedded = json.dumps(data, separators=(",", ":"))
     event_names_js = json.dumps(EVENT_NAMES, separators=(",", ":"))
+    championship_events_js = json.dumps(sorted(CHAMPIONSHIP_EVENTS), separators=(",", ":"))
     event_filter_html = (
         '<select id="filter-event" title="Filter by event"><option value="">All events</option></select>'
-        if page_id == "region" else ""
+        if page_id in ("region", "history") else ""
     )
     return (HTML_TEMPLATE
             .replace("__DATA__", embedded)
@@ -1577,14 +1636,16 @@ def build_html(data: dict, title: str, timestamp: str, page_id: str = "region") 
             .replace("__TIMESTAMP__", timestamp)
             .replace("__PAGE_ID__", page_id)
             .replace("__EVENT_NAMES_JS__", event_names_js)
+            .replace("__CHAMPIONSHIP_EVENTS_JS__", championship_events_js)
             .replace("__EVENT_FILTER_HTML__", event_filter_html))
 
 
-def write_view(event_prefix: str | None, out_path: str, title: str, timestamp: str) -> None:
-    data = load_data(DB_PATH, event_prefix)
+def write_view(event_prefix: str | None, out_path: str, title: str, timestamp: str,
+               page_id: str | None = None, team_filter_event: str | None = None) -> None:
+    data = load_data(DB_PATH, event_prefix, team_filter_event=team_filter_event)
     print(f"  {data['overview']['total_teams']} teams, {data['overview']['total_matches']} matches  →  {out_path}")
-    page_id = event_prefix if event_prefix else "region"
-    html = build_html(data, title, timestamp, page_id)
+    effective_page_id = page_id or (event_prefix if event_prefix else "region")
+    html = build_html(data, title, timestamp, effective_page_id)
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(html)
 
@@ -2056,6 +2117,12 @@ def main():
     data_rw = load_data(DB_PATH)
     pages.append(("Region Wide.html", "Region Wide",
                   f"{data_rw['overview']['total_teams']} teams · {data_rw['overview']['total_matches']} matches"))
+
+    write_view(None, "team_history.html", "TBA 2026 — Team History", timestamp,
+               page_id="history", team_filter_event="2026cmptx")
+    data_th = load_data(DB_PATH, team_filter_event="2026cmptx")
+    pages.append(("team_history.html", "Team History",
+                  f"{data_th['overview']['total_teams']} teams · 2026cmptx · all qualifier events"))
 
     for ep in event_prefixes:
         fname = f"{ep}.html"
