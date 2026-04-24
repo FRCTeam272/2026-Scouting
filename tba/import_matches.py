@@ -542,7 +542,7 @@ def import_matches(json_path: str, db_path: str) -> None:
     _insert_matches(matches, json_path, db_path)
 
 
-def _sync_team_names(con: sqlite3.Connection) -> None:
+def _sync_team_names(con: sqlite3.Connection, fetch_size = 25) -> None:
     """Fetch TBA team info for any team_key not yet in the teams table."""
     import requests
     known = {row[0] for row in con.execute("SELECT team_key FROM teams")}
@@ -555,7 +555,7 @@ def _sync_team_names(con: sqlite3.Connection) -> None:
     count = 0
     for tk in sorted(needed):
         count += 1
-        if count % 25 == 0: break  # avoid excessive TBA requests
+        if count % fetch_size == 0: break  # avoid excessive TBA requests
         try:
             resp = requests.get(f"{TBA_BASE}/team/{tk}", headers=headers)
             sleep(1)  # be nice to TBA's servers
