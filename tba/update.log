@@ -385,3 +385,12 @@ Loading data from matches.db...
   index.html  →  11 pages listed
 Done. Generated 10 file(s).
 [2026-04-24 17:00:01] Staging changes...
+[main f33a0b5c] Auto-update: matches 714->714 (+0), completed 714->714 (+0) [2026-04-24 17:00:01]
+ 13 files changed, 101 insertions(+), 14 deletions(-)
+[2026-04-24 17:00:01] Pushing to origin (match data updated)...
+remote: This repository moved. Please use the new location:        
+remote:   https://github.com/FRCTeam272/2026-Scouting.git        
+To https://github.com/frcteam272/2026-Scouting
+   b1f83fab..f33a0b5c  main -> main
+[2026-04-24 17:00:01] Push complete.
+[2026-04-24 17:00:01] === TBA update finished ===
