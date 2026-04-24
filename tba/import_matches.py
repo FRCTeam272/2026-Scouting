@@ -552,7 +552,10 @@ def _sync_team_names(con: sqlite3.Connection) -> None:
     if not needed:
         return
     headers = _tba_headers()
+    count = 0
     for tk in sorted(needed):
+        count += 1
+        if count % 25 == 0: break  # avoid excessive TBA requests
         try:
             resp = requests.get(f"{TBA_BASE}/team/{tk}", headers=headers)
             sleep(1)  # be nice to TBA's servers
