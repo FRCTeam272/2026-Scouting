@@ -52,6 +52,8 @@ log "=== TBA update started ==="
 read -r before_count before_completed <<< "$(get_match_counts)"
 log "Matches in DB before import: $before_count total, $before_completed completed"
 
+git pull --force
+
 # ── 1. Import match data ──────────────────────────────────────────────────────
 log "Running import_matches.py..."
 $PYTHON import_matches.py
