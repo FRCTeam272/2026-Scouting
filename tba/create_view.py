@@ -492,9 +492,8 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     #toggle-historic{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--muted);font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;}
     #toggle-historic:hover{border-color:var(--accent);color:var(--text);}
     #toggle-historic.active{border-color:#f5a623;color:#f5a623;background:rgba(245,166,35,.1);}
-    .historic-match{display:none;}
-    body.show-historic .historic-match{display:block;}
-    .historic-badge{font-size:.65rem;font-weight:700;color:var(--muted);background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.3);border-radius:3px;padding:1px 5px;letter-spacing:.04em;white-space:nowrap;}
+    body.hide-historic .historic-match{display:none!important;}
+    .historic-badge{font-size:.65rem;font-weight:700;color:#f5a623;background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.3);border-radius:3px;padding:1px 5px;letter-spacing:.04em;white-space:nowrap;text-transform:uppercase;}
 
     .layout{display:flex;flex:1;overflow:hidden;}
     aside{width:var(--sidebar-w);flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
@@ -689,7 +688,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   <input id="search" type="text" placeholder="Search team..."/>
   __EVENT_FILTER_HTML__
   <button id="toggle-climb" onclick="toggleClimb()" title="Show/hide climb stats">Hide Climb</button>
-  <button id="toggle-historic" onclick="toggleHistoric()" title="Show/hide qualifier history">Show History</button>
+  <button id="toggle-historic" onclick="toggleHistoric()" title="Show only this competition's matches">This Event Only</button>
   <select id="sort-by" title="Sort teams by">
     <option value="tower">Tower usage</option>
     <option value="num" selected>Team number</option>
@@ -1117,8 +1116,8 @@ function loadTeam(key) {
 
   const pageMatches = t.match_history.map(m => ({
     ...m,
-    is_historic: PAGE_ID !== 'history' && HAS_CHAMP_DATA && (PAGE_ID === 'worlds'
-      ? !CHAMPIONSHIP_EVENTS_JS.has(m.event)
+    is_historic: PAGE_ID !== 'history' && (PAGE_ID === 'worlds'
+      ? HAS_CHAMP_DATA && !CHAMPIONSHIP_EVENTS_JS.has(m.event)
       : !m.event.startsWith(PAGE_ID))
   }));
   const hasBreakdowns = pageMatches.some(m => m.auto_tower !== null || m.endgame_tower !== null);
@@ -1237,7 +1236,7 @@ function loadTeam(key) {
         const videoLink  = m.video_url ? `<a class="video-link" href="${m.video_url}" target="_blank">▶ Video</a>` : '';
         return `<div class="match-card${m.is_historic ? ' historic-match' : ''}">
           <div class="match-card-header">
-            ${m.is_historic ? `<span class="historic-badge">QUALIFIER</span>` : ''}
+            ${m.is_historic ? `<span class="historic-badge">${eventShort(m.event) || m.event}</span>` : ''}
             <span class="match-label">${lbl}</span>
             <span class="match-color ${m.color}">${m.color.toUpperCase()}</span>
             <span class="${resultCls}">${resultText}</span>
@@ -1247,22 +1246,14 @@ function loadTeam(key) {
             <button class="compare-match-btn" onclick="compareMatch('${m.match_key}')">Compare</button>
           </div>
           <div class="match-fields">
-            <div class="field"><div class="field-label">Auto Tower</div>
-              <div class="field-value">${towerBadge(m.auto_tower)}</div></div>
-            <div class="field"><div class="field-label">Endgame Tower</div>
-              <div class="field-value">${towerBadge(m.endgame_tower)}</div></div>
-            <div class="field"><div class="field-label">Hub Auto Pts</div>
-              <div class="field-value val-num">${num(m.hub_auto_pts)}</div></div>
-            <div class="field"><div class="field-label">Hub Teleop Pts</div>
-              <div class="field-value val-num">${num(m.hub_teleop_pts)}</div></div>
-            <div class="field"><div class="field-label">Hub Endgame Pts</div>
-              <div class="field-value val-num">${num(m.hub_endgame_pts)}</div></div>
-            <div class="field"><div class="field-label">Tower Pts</div>
-              <div class="field-value val-num">${num(m.total_tower_pts)}</div></div>
-            <div class="field"><div class="field-label">Energized</div>
-              <div class="field-value ${m.energized===null?'val-null':m.energized?'val-yes':'val-no'}">${m.energized===null?'—':m.energized?'Yes':'No'}</div></div>
-            <div class="field"><div class="field-label">RP</div>
-              <div class="field-value val-num">${num(m.rp)}</div></div>
+            ${m.auto_tower != null ? `<div class="field"><div class="field-label">Auto Tower</div><div class="field-value">${towerBadge(m.auto_tower)}</div></div>` : ''}
+            ${m.endgame_tower != null ? `<div class="field"><div class="field-label">Endgame Tower</div><div class="field-value">${towerBadge(m.endgame_tower)}</div></div>` : ''}
+            ${m.hub_auto_pts != null ? `<div class="field"><div class="field-label">Hub Auto Pts</div><div class="field-value val-num">${num(m.hub_auto_pts)}</div></div>` : ''}
+            ${m.hub_teleop_pts != null ? `<div class="field"><div class="field-label">Hub Teleop Pts</div><div class="field-value val-num">${num(m.hub_teleop_pts)}</div></div>` : ''}
+            ${m.hub_endgame_pts != null ? `<div class="field"><div class="field-label">Hub Endgame Pts</div><div class="field-value val-num">${num(m.hub_endgame_pts)}</div></div>` : ''}
+            ${m.total_tower_pts != null ? `<div class="field"><div class="field-label">Tower Pts</div><div class="field-value val-num">${num(m.total_tower_pts)}</div></div>` : ''}
+            ${m.energized != null ? `<div class="field"><div class="field-label">Energized</div><div class="field-value ${m.energized?'val-yes':'val-no'}">${m.energized?'Yes':'No'}</div></div>` : ''}
+            ${m.rp != null ? `<div class="field"><div class="field-label">RP</div><div class="field-value val-num">${num(m.rp)}</div></div>` : ''}
           </div>
         </div>`;
       }).join('')}
@@ -1570,11 +1561,12 @@ function toggleClimb() {
 
 // ── Historic toggle ───────────────────────────────────────────────────────────
 function toggleHistoric() {
-  document.body.classList.toggle('show-historic');
+  document.body.classList.toggle('hide-historic');
   const btn = document.getElementById('toggle-historic');
-  btn.textContent = document.body.classList.contains('show-historic') ? 'Hide History' : 'Show History';
-  btn.classList.toggle('active', document.body.classList.contains('show-historic'));
-  localStorage.setItem('tba_show_historic', document.body.classList.contains('show-historic') ? '1' : '');
+  const active = document.body.classList.contains('hide-historic');
+  btn.textContent = active ? 'Show All' : 'This Event Only';
+  btn.classList.toggle('active', active);
+  localStorage.setItem('tba_hide_historic', active ? '1' : '');
 }
 
 // Boot
@@ -1596,11 +1588,12 @@ if (localStorage.getItem('tba_hide_climb') === '1') {
 {
   const _hasChamp = HAS_CHAMP_DATA;
   const _histBtn = document.getElementById('toggle-historic');
-  if (!_hasChamp || PAGE_ID === 'history') {
+  const _hideHistBtn = PAGE_ID === 'history' || (PAGE_ID === 'worlds' && !_hasChamp);
+  if (_hideHistBtn) {
     if (_histBtn) _histBtn.style.display = 'none';
-  } else if (localStorage.getItem('tba_show_historic') === '1') {
-    document.body.classList.add('show-historic');
-    if (_histBtn) { _histBtn.textContent = 'Hide History'; _histBtn.classList.add('active'); }
+  } else if (localStorage.getItem('tba_hide_historic') === '1') {
+    document.body.classList.add('hide-historic');
+    if (_histBtn) { _histBtn.textContent = 'Show All'; _histBtn.classList.add('active'); }
   }
 }
 // Event filter dropdown (worlds and history pages)
@@ -2155,6 +2148,19 @@ def main():
         fname = f"{ep}.html"
         display = EVENT_NAMES.get(ep[:8], ep)
         title = f"TBA 2026 — {display}"
+        pid = ep if ep in CHAMPIONSHIP_EVENTS else (ep[:8] if ep[:8] in CHAMPIONSHIP_EVENTS else None)
+        if pid:
+            # Championship field with no matches yet — show full dashboard with qualifier history
+            # if any registered teams have scouted data; otherwise fall back to team roster.
+            d_pre = load_data(DB_PATH, None, team_filter_event=ep)
+            if d_pre['overview']['total_teams'] > 0:
+                html = build_html(d_pre, title, timestamp, pid)
+                with open(fname, "w", encoding="utf-8") as f:
+                    f.write(html)
+                n = d_pre['overview']['total_teams']
+                print(f"  {n} teams (pre-event)  →  {fname}")
+                pages.append((fname, display, f"{n} teams · qualifier history"))
+                continue
         n = write_upcoming_page(ep, fname, title, timestamp)
         print(f"  {n} teams (upcoming)  →  {fname}")
         pages.append((fname, display, f"{n} teams · upcoming"))
