@@ -12,6 +12,8 @@ PYTHON="${PYTHON:-python3}"
 TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S')"
 LOG_FILE="${LOG_FILE:-update.log}"
 
+source ~/2026-Scouting/tba/env/bin/activate
+
 # Clear log file if it exceeds 500 lines
 if [[ -f "$LOG_FILE" ]] && (( "$(wc -l < "$LOG_FILE")" > 500 )); then
     > "$LOG_FILE"
