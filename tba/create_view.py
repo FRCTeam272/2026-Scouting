@@ -2101,6 +2101,216 @@ renderPinned();
     return len(rows)
 
 
+ELIM_DIVISION_FIELDS = [
+    ("2026arc", "Archimedes"),
+    ("2026cur", "Curie"),
+    ("2026dal", "Daly"),
+    ("2026gal", "Galileo"),
+    ("2026hop", "Hopper"),
+    ("2026joh", "Johnson"),
+    ("2026mil", "Milstein"),
+    ("2026new", "Newton"),
+]
+
+SF_ROUND_MAP = {s: r for r, sets in enumerate([
+    [1,2,3,4], [5,6,7,8], [9,10,11], [12,13]
+], start=1) for s in sets}
+SF_ROUND_NAMES = {1: "Round 1", 2: "Round 2", 3: "Round 3", 4: "Round 4"}
+
+
+def generate_elim_schedule_page(db_path: str, timestamp: str) -> None:
+    """Generate elim_schedule.html — elimination schedule for all division fields."""
+    con = sqlite3.connect(db_path)
+    con.row_factory = sqlite3.Row
+
+    # Preload alliance scores for all elim matches
+    all_scores: dict = {}
+    for row in con.execute(
+        "SELECT match_key, color, score FROM match_alliances WHERE comp_level != 'qm'"
+    ):
+        all_scores[(row["match_key"], row["color"])] = row["score"]
+
+    field_data: list[tuple[str, str, list]] = []
+    any_elim = False
+
+    for ep, fname in ELIM_DIVISION_FIELDS:
+        rows = con.execute("""
+            SELECT m.key, m.comp_level, m.set_number, m.match_number,
+                   COALESCE(m.actual_time, m.time, m.predicted_time) AS sched_time,
+                   m.winning_alliance
+            FROM matches m
+            WHERE substr(m.key, 1, 8) = ? AND m.comp_level != 'qm'
+            ORDER BY COALESCE(m.actual_time, m.time, m.predicted_time, 9999999999),
+                     m.set_number, m.match_number
+        """, (ep,)).fetchall()
+
+        matches = []
+        for row in rows:
+            mk = row["key"]
+            teams: dict = {"red": [], "blue": []}
+            for trow in con.execute(
+                "SELECT color, team_key FROM alliance_teams WHERE match_key = ? ORDER BY id", (mk,)
+            ):
+                teams[trow["color"]].append(trow["team_key"].replace("frc", ""))
+
+            cl = row["comp_level"]
+            sn = row["set_number"]
+            mn = row["match_number"]
+            if cl == "sf":
+                rnd = SF_ROUND_MAP.get(sn, 0)
+                label = f"SF{sn} M{mn}"
+                round_label = SF_ROUND_NAMES.get(rnd, "Semi")
+            elif cl == "f":
+                label = f"Final {mn}"
+                round_label = "Finals"
+            else:
+                label = f"{cl.upper()} {mn}"
+                round_label = cl.upper()
+
+            rs = all_scores.get((mk, "red"))
+            bs = all_scores.get((mk, "blue"))
+            winner = row["winning_alliance"] or ""
+            matches.append({
+                "label": label,
+                "round": round_label,
+                "red": teams["red"],
+                "blue": teams["blue"],
+                "red_score": rs,
+                "blue_score": bs,
+                "winner": winner,
+                "sched_time": row["sched_time"],
+            })
+
+        if matches:
+            any_elim = True
+        field_data.append((ep, fname, matches))
+
+    con.close()
+
+    def match_card_html(m: dict) -> str:
+        rw = m["winner"] == "red"
+        bw = m["winner"] == "blue"
+        decided = bool(m["winner"])
+        ts_attr = f' data-ts="{m["sched_time"]}"' if m["sched_time"] else ""
+        red_cls  = " winner" if rw else (" loser" if decided else "")
+        blue_cls = " winner" if bw else (" loser" if decided else "")
+        red_teams  = " · ".join(m["red"])  or "TBD"
+        blue_teams = " · ".join(m["blue"]) or "TBD"
+        red_score  = m["red_score"]  if m["red_score"]  is not None else "—"
+        blue_score = m["blue_score"] if m["blue_score"] is not None else "—"
+        win_badge  = lambda w: '<span class="win-badge">WIN</span>' if w else ""
+        return f"""<div class="match-card">
+  <div class="match-card-header">
+    <span class="match-label">{m["label"]}</span>
+    <span class="round-tag">{m["round"]}</span>
+    <span class="match-time"{ts_attr}></span>
+  </div>
+  <div class="alliance red{red_cls}">
+    <span class="dot red"></span>
+    <span class="teams">{red_teams}</span>
+    {win_badge(rw)}<span class="score">{red_score}</span>
+  </div>
+  <div class="alliance blue{blue_cls}">
+    <span class="dot blue"></span>
+    <span class="teams">{blue_teams}</span>
+    {win_badge(bw)}<span class="score">{blue_score}</span>
+  </div>
+</div>"""
+
+    def field_section_html(ep: str, fname: str, matches: list) -> str:
+        count_badge = (f'<span class="match-count">{len(matches)} matches</span>'
+                       if matches else '<span class="match-count pending">quals</span>')
+        body = (
+            "".join(match_card_html(m) for m in matches)
+            if matches
+            else '<div class="no-elim">Qualifying in progress…</div>'
+        )
+        return f"""<div class="field-section">
+  <div class="field-header">
+    <a class="field-name" href="{ep}.html">{fname}</a>
+    {count_badge}
+  </div>
+  {body}
+</div>"""
+
+    sections = "\n".join(field_section_html(ep, fname, m) for ep, fname, m in field_data)
+    status_note = "" if any_elim else '<div class="status-note">Elimination matches have not started yet.</div>'
+
+    html = f"""\
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>2026 Championship — Elimination Schedule</title>
+  <style>
+    :root{{--bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e334d;
+          --accent:#4f8ef7;--accent2:#f7a84f;--text:#e4e6f0;--muted:#7b82a0;
+          --green:#4caf82;--red:#e05c5c;}}
+    *{{box-sizing:border-box;margin:0;padding:0;}}
+    body{{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}}
+    header{{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:14px;flex-shrink:0;}}
+    header h1{{font-size:1.05rem;font-weight:700;color:var(--accent);letter-spacing:.04em;}}
+    .back{{color:var(--muted);font-size:.8rem;text-decoration:none;margin-left:auto;}}
+    .back:hover{{color:var(--accent);}}
+    main{{flex:1;padding:20px;}}
+    .status-note{{background:rgba(79,142,247,.08);border:1px solid rgba(79,142,247,.3);border-radius:8px;padding:12px 16px;font-size:.85rem;color:var(--accent);margin-bottom:16px;}}
+    .fields-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;}}
+    .field-section{{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}}
+    .field-header{{background:var(--surface2);padding:9px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}}
+    .field-name{{font-size:.95rem;font-weight:700;color:var(--accent2);text-decoration:none;}}
+    .field-name:hover{{text-decoration:underline;}}
+    .match-count{{margin-left:auto;font-size:.7rem;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1px 7px;}}
+    .match-count.pending{{color:var(--muted);}}
+    .no-elim{{padding:18px 14px;color:var(--muted);font-size:.82rem;font-style:italic;}}
+    .match-card{{border-bottom:1px solid var(--border);}}
+    .match-card:last-child{{border-bottom:none;}}
+    .match-card-header{{padding:5px 11px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;}}
+    .match-label{{font-weight:700;font-size:.82rem;color:var(--accent2);}}
+    .round-tag{{font-size:.65rem;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;}}
+    .match-time{{margin-left:auto;font-size:.7rem;color:var(--muted);}}
+    .alliance{{display:flex;align-items:center;gap:7px;padding:6px 11px;border-bottom:1px solid var(--border);}}
+    .alliance:last-child{{border-bottom:none;}}
+    .alliance.winner{{background:rgba(76,175,130,.12);}}
+    .alliance.loser{{opacity:.45;}}
+    .dot{{width:7px;height:7px;border-radius:50%;flex-shrink:0;}}
+    .dot.red{{background:var(--red);}}
+    .dot.blue{{background:var(--accent);}}
+    .teams{{flex:1;font-size:.75rem;color:var(--text);}}
+    .win-badge{{font-size:.62rem;font-weight:700;color:var(--green);}}
+    .score{{font-size:.8rem;font-weight:700;color:var(--text);min-width:24px;text-align:right;}}
+    footer{{padding:10px 20px;font-size:.72rem;color:var(--muted);text-align:center;border-top:1px solid var(--border);flex-shrink:0;}}
+    @media(max-width:600px){{main{{padding:12px;}}.fields-grid{{grid-template-columns:1fr;}}}}
+  </style>
+</head>
+<body>
+<header>
+  <h1>2026 Championship — Elimination Schedule</h1>
+  <a class="back" href="index.html">← Index</a>
+</header>
+<main>
+  {status_note}
+  <div class="fields-grid">
+    {sections}
+  </div>
+</main>
+<footer>Updated {timestamp} · <a href="index.html" style="color:var(--muted);">index.html</a></footer>
+<script>
+document.querySelectorAll('.match-time[data-ts]').forEach(el => {{
+  const d = new Date(+el.dataset.ts * 1000);
+  el.textContent = d.toLocaleString([],{{weekday:'short',hour:'2-digit',minute:'2-digit'}});
+}});
+</script>
+</body>
+</html>
+"""
+
+    with open("elim_schedule.html", "w", encoding="utf-8") as f:
+        f.write(html)
+    total = sum(len(m) for _, _, m in field_data)
+    print(f"  elim_schedule.html  →  {total} elim matches across {len(field_data)} fields")
+
+
 def main():
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
     print(f"Loading data from {DB_PATH}...")
@@ -2169,6 +2379,9 @@ def main():
     if n_district:
         pages.insert(1, ("district_points.html", "District Points", f"{n_district} teams · FMA 2026"))
         print(f"  district_points.html  →  {n_district} teams")
+
+    generate_elim_schedule_page(DB_PATH, timestamp)
+    pages.insert(2, ("elim_schedule.html", "Elim Schedule", "elimination bracket · all fields"))
 
     awards = load_awards(DB_PATH)
     index_html = build_index(pages, timestamp, awards)
